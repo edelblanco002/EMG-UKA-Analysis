@@ -242,6 +242,8 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
     trainTableFile.close()
     testTableFile.close()
 
+    pdb.set_trace()
+
     # Define the parameters in order to calculate the row size and the name of the features
     nChannels = 6
     nFeatures = 5
