@@ -1,0 +1,38 @@
+from sklearn.mixture import GaussianMixture as GMM
+import numpy as np
+
+def EMestimation(model,X):
+	M = model.n_components
+	N = np.shape(X)[0]
+	Q = []
+
+	weightsA = model.weights_
+	meansA = model.means_
+	covA = model.covariances_
+
+	QA = 0
+
+	for x in x:
+		for m in range(M):
+			QA += model.predict_proba(np.array([x])) @ model._estimate_weighted_log_prob(np.array([x])).transpose()
+
+	QA = QA[0][0]
+
+	Q.append(QA)
+
+	delta = 1e-3
+
+	converged = False
+	maxIter = 10
+	iter = 0
+
+	while converged == False and iter < maxIter:
+		postProbs = model.predictProba(X) # Matrix [N x M]
+		weightsB = np.sum(postProbs, axis=0)/N
+
+		meansB = ((X.transpose() @ postProbs)/sum(postProbs)).transpose()
+
+		covB = np.zeros(np.shape(covA))
+
+		for m in range(M):
+			covB[m] = ((X - model.means_[m]).transpose() @ (X - model.means_[m])).transpose() * 

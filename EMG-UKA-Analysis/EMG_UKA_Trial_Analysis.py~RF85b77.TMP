@@ -1,0 +1,54 @@
+import classificatorEvaluation
+import drawHeatMap
+import drawBarPlot
+import gatherDataIntoTable
+import getFeatureScores
+import featureSelectionProbe
+from featureSelectionProbe import Probe
+import telegramNotification
+import traceback
+
+#dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus'
+#scriptpath = 'C:/Users/Eder/source/repos/EMG-UKA-Trial-Analysis'
+
+dirpath = '/mnt/ldisk/eder/EMG-UKA-Trial-Corpus'
+scriptpath = '/home/aholab/eder/bips/scripts/EMG-UKA-Analysis'
+
+uttType = 'audible'
+
+#gatherDataIntoTable.main(dirpath,uttType,'train')
+#gatherDataIntoTable.main(dirpath,uttType,'test')
+#getFeatureScores.main(dirpath,scriptpath,uttType,'Simple')
+#getFeatureScores.main(dirpath,scriptpath,uttType,'Transitions')
+#getFeatureScores.main(dirpath,scriptpath,uttType,'All')
+#drawBarPlot.main(dirpath)
+#drawHeatMap.main(dirpath)
+
+experimentName = 'Experiment2'
+
+probes = [
+    Probe(
+        reductionMethod = 'SelectKBest',
+        n_features = 12,
+        scoreFunction = 'f_classif',
+        classificationMethod = 'GMMmodels'
+        ),
+    Probe(
+        reductionMethod = 'SelectKBest',
+        n_features = 12,
+        scoreFunction = 'mutual_info_classif',
+        classificationMethod = 'GMMmodels'
+        ),
+    Probe(
+        reductionMethod = 'LDAReduction',
+        n_features = 12,
+        classificationMethod = 'GMMmodels'
+        )
+]
+
+try:
+	featureSelectionProbe.main(dirpath,scriptpath,uttType,'Simple',experimentName,probes)
+
+except:
+	telegramNotification.sendTelegram('Execution failed')
+	traceback.print_exc()

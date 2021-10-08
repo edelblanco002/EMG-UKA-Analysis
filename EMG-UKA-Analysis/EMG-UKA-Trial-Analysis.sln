@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31321.278
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "EMG-UKA-Trial-Analysis", "EMG-UKA-Trial-Analysis.pyproj", "{E117E088-51F4-4CAC-B049-8459F8E629E7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7D76079F-8977-46A9-8D53-665E44F0BCD4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E117E088-51F4-4CAC-B049-8459F8E629E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E117E088-51F4-4CAC-B049-8459F8E629E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8A220E69-FF96-46B4-B67C-521DBB24DBBA}
+	EndGlobalSection
+EndGlobal
