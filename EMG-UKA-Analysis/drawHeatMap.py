@@ -1,3 +1,4 @@
+import math
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
 import numpy as np
@@ -40,7 +41,7 @@ def getFrameNames(stackingWidth):
     return frameNames
 
 
-def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',fileBase='audibleAll'):
+def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',fileBase='audibleAll',channelsPerPlot=6):
     
     # Read the scores from matrices
     scoresFClass = np.load(dirpath + f'/scoresFClass{fileBase}.npy')
@@ -66,62 +67,84 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',fileBase='audi
     # Create DataFrames with one entry for each single score
     dfFClass = createDataFrame(scoresFClass, channelNames, featureNames, frameNames)
     dfMutual = createDataFrame(scoresMutual, channelNames, featureNames, frameNames)    
-    
-    # For the first figure (scores of f_classif), create 5 horizontal subplots in a column
+
+    # How many plots are needed to plot every channel? channelsPerPlot = 6 by default
+    nPlots = math.ceil(channelN/channelsPerPlot)
+    plotsFClass = [i for i in range(1,nPlots+1)] # Create as many plots as needed. First plots are for f_class
+    plotsMutual = [i + nPlots for i in plotsFClass] # Last plots are for mutual
+
+    # For each figure (scores of f_classif), create a 'channelsPerPlot' number of subplots in a column
     # and one vertical plot on the right, with the width relation of 1:40 for the vertical plot and 39:40 for the horizontal plots
-    plt.figure(1)
-    gsFClass = gridspec.GridSpec(channelN,40)
-    
     axisFClass = []
-    for i in range(channelN):
-        axisFClass.append(plt.subplot(gsFClass[i,0:39]))
-    colorBarAxisFClass = plt.subplot(gsFClass[:,39])
-    
+    colorBarAxisFClass = []
+
+    for i in plotsFClass: # For each plot corresponding to FClass
+        plt.figure(i)
+        if i == plotFClass[-1]: # In the last plot, draw just the resting subplots
+            channelsInPlot = channelN%channelsPerPlot
+        else:
+            channelsInPlot = channelsPerPlot
+
+        gsFClass = gridspec.GridSpec(channelsInPlot,40)
+
+        for j in range(channelsInPlot):
+            axisFClass.append(plt.subplot(gsFClass[j,0:39]))
+        colorBarAxisFClass.append(plt.subplot(gsFClass[:,39]))
+
     # The same for the second figure (scores of mutual_info_classif)
-    plt.figure(2)
-    gsMutual = gridspec.GridSpec(channelN,40)
-    
     axisMutual = []
-    for i in range(channelN):
-        axisMutual.append(plt.subplot(gsMutual[i,0:39]))
-    colorBarAxisMutual = plt.subplot(gsMutual[:,39])
-    
+    colorBarAxisMutual = []
+
+    for i in plotsMutual:  # For each plot corresponding to mutual_info_classif
+        plt.figure(i)
+        if i == plotsMutual[-1]: # If it's the last plot, draw just the resting subplots
+            channelsInPlot = channelN%channelsPerPlot
+        else:
+            channelsInPlot = channelsPerPlot
+
+        gsMutual = gridspec.GridSpec(channelsInPlot,40)
+
+        for j in range(channelsInPlot):
+            axisMutual.append(plt.subplot(gsMutual[j,0:39]))
+        colorBarAxisMutual.append(plt.subplot(gsMutual[:,39]))
+
     # Draw one subplot for each channel
     for i in range(channelN):
         # From the dataset, find the entries corresponding to the actual channel
         dfFClass_ = dfFClass[dfFClass['Channel'] == channelNames[i]]
         dfMutual_ = dfMutual[dfMutual['Channel'] == channelNames[i]]
-    
+
         # Create a rectangular dataframe with the features as rows, the frames as columns and the scores as the values
         dfFClass_ = dfFClass_.pivot(index="Feature",columns="Frame",values="Score")
         dfFClass_ = dfFClass_[frameNames]
         dfMutual_ = dfMutual_.pivot(index="Feature",columns="Frame",values="Score")
         dfMutual_ = dfMutual_[frameNames]
-    
+
         # Draw the heatmap for the channel, anchoring the scale to the absolute max and min score, and drawing the color bar in its corresponding vertical plot
-        sns.heatmap(dfFClass_,ax=axisFClass[i], linewidths=.2, vmax=maxScoreFClass, vmin=minScoreFClass, yticklabels=True, xticklabels=True, cbar_ax=colorBarAxisFClass)
-        sns.heatmap(dfMutual_,ax=axisMutual[i], linewidths=.2, vmax=maxScoreMutual, vmin=minScoreMutual, yticklabels=True, xticklabels=True, cbar_ax=colorBarAxisMutual)
-    
+        # There is a color bar axis in each plot. The selected color bar axis is the corresponding to the actual plot
+        sns.heatmap(dfFClass_,ax=axisFClass[i], linewidths=.2, vmax=maxScoreFClass, vmin=minScoreFClass, yticklabels=True, xticklabels=True, cbar_ax=colorBarAxisFClass[math.floor(i/channelsPerPlot)])
+        sns.heatmap(dfMutual_,ax=axisMutual[i], linewidths=.2, vmax=maxScoreMutual, vmin=minScoreMutual, yticklabels=True, xticklabels=True, cbar_ax=colorBarAxisMutual[math.floor(i/channelsPerPlot)])
+
         axisFClass[i].set_title('')
         axisMutual[i].set_title('')
 
-        # Left the xlabels just for the last plot (on the bottom)
-        if i < (channelN-1):
+        # Left the xlabels just for the last subplot (on the bottom)
+        if i%channelsPerPlot == channelsPerPlot - 1: # If it's the last subplot of the plot
             axisFClass[i].set_xticks([])
             axisFClass[i].set_xlabel('')
             axisMutual[i].set_xticks([])
             axisMutual[i].set_xlabel('')
-    
+
         axisFClass[i].set_ylabel(channelNames[i])
         axisMutual[i].set_ylabel(channelNames[i])
-    
+
     # Set the title for the figure 1
     plt.figure(1)
     plt.suptitle("Feature scores with f_classif")
     # And for the figure 2
     plt.figure(2)
     plt.suptitle("Feature scores with mutual_info_classif")
-    
+
     plt.show()
 
     return

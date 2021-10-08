@@ -19,19 +19,21 @@ analyzedLabels = 'Simple' # 'All', 'Simple', 'Transitions' or 'PilotStudy'
 
 #gatherDataIntoTable.main(dirpath,uttType,'train')
 #gatherDataIntoTable.main(dirpath,uttType,'test')
-#getFeatureScores.main(dirpath,scriptpath,uttType,'Simple')
-#getFeatureScores.main(dirpath,scriptpath,uttType,'Transitions')
-#getFeatureScores.main(dirpath,scriptpath,uttType,'All')
-#drawBarPlot.main(dirpath)
-#drawHeatMap.main(dirpath)
 
-experimentName = 'ExperimentPrueba'
+experimentName = 'ExperimentBagging3'
 
 
 # Available reduction methods: 'SelectKBest', 'LDAReduction'
 # Available scoreFunction (only for 'SelectKBest'): 'f_classif', 'mutual_into_classif'
 # Available classificationMethods = 'GMMmodels', 'bagging'
 #probes = [
+#    Probe(
+#        reductionMethod = 'LDAReduction',
+#        n_features = 38,
+#        classificationMethod = 'bagging',
+#        n_estimators = 10,
+#        min_samples_leaf = 10
+#        ),
 #    Probe(
 #        reductionMethod = 'LDAReduction',
 #        n_features = 38,
@@ -47,8 +49,9 @@ for n_estimators in [10, 25, 50 ,75, 100]:
     for min_samples_leaf in [10, 25, 50, 75, 100]:
         probes.append(
             Probe(
-                reductionMethod = 'LDAReduction',
-                n_features = 38,
+                reductionMethod = 'SelectKBest',
+                scoreFunction = 'mutual_info_classif',
+                n_features = 100,
                 classificationMethod = 'bagging',
                 n_estimators = n_estimators,
                 min_samples_leaf = min_samples_leaf

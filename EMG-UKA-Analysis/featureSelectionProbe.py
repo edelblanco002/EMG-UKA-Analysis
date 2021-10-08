@@ -1,17 +1,22 @@
 from classifiers import *
 import datasetManipulation
 from dimensionalityReduction import *
+import gatherDataIntoTable
 import numpy as np
 import os
+import pandas as pd
 import pickle
-#import pdb
+import pdb
 import shutil
 import tables
 import telegramNotification
 import time
+import uuid
 
 class Probe:
-    def __init__(self,reductionMethod='',n_features=0,classificationMethod='',scoreFunction='f_classif',n_estimators=10,min_samples_leaf=10):
+    def __init__(self,reductionMethod='',n_features=0,classificationMethod='',scoreFunction='',n_estimators=0,min_samples_leaf=0):
+        self.name = uuid.uuid4().hex[:8]
+
         # Validation rules
         allowedReductionMethods = ['SelectKBest','LDAReduction']
         allowedClassificationMethods = ['GMMmodels','bagging']
@@ -55,10 +60,49 @@ class Probe:
             self.scoreFunction = ''
 
         if classificationMethod == 'bagging':
+            if n_estimators == 0:
+                print("Please, give a value to 'n_estimators'")
+                raise ValueError
+            if min_samples_leaf == 0:
+                print("Please, give a value to 'min_samples_leaf'")
+                raise ValueError
+
             self.n_estimators = n_estimators
             self.min_samples_leaf = min_samples_leaf
 
-def trainAndTest(dirpath, probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, probe, name=''):    
+def probes2csv(probes,dirpath,probeName):
+    df = pd.DataFrame(columns=['Name', 'Classification method', 'Reduction method', 'Score function', 'n_estimators', 'min_samples_leaf', 'n_features','Elapsed time in training','Elapsed time in testing with train subset','Elapsed time in testing with test subset','Accuracy with train subset','Accuracy with test subset'])
+
+    for probe in probes:
+        row = {}
+        row['Name'] = probe.name
+        row['Classification method'] = probe.classificationMethod
+        if probe.classificationMethod == 'bagging':
+            row['n_estimators'] = probe.n_estimators
+            row['min_samples_leaf'] = probe.min_samples_leaf
+        row['Reduction method'] = probe.reductionMethod
+        row['n_features'] = probe.n_features
+        if probe.reductionMethod == 'SelectKBest':
+            row['Score function'] = probe.scoreFunction
+        df = df.append(pd.Series(row),ignore_index=True)
+
+    df.to_csv(f"{dirpath}/results/{probeName}/probeList.csv",index=False)
+
+def saveExecutionResults(name,trainingTime,testingTrainTime,testingTestTime,trainScore,testScore,dirpath,probeName):
+    df = pd.read_csv(f"{dirpath}/results/{probeName}/probeList.csv")
+
+    # Time is stored in seconds, so it can be easily manipulated in the future
+    df.loc[df['Name'] == name,['Elapsed time in training']] = trainingTime
+    df.loc[df['Name'] == name,['Elapsed time in testing with train subset']] = testingTrainTime
+    df.loc[df['Name'] == name,['Elapsed time in testing with test subset']] = testingTestTime
+
+    # Accuracy scores are stored as float, representing the percentage
+    df.loc[df['Name'] == name,['Accuracy with train subset']] = trainScore
+    df.loc[df['Name'] == name,['Accuracy with test subset']] = testScore
+
+    df.to_csv(f"{dirpath}/results/{probeName}/probeList.csv",index=0)
+
+def trainAndTest(dirpath, probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, probe):    
     # This function trains the GMM models and tests them with the train and the test features
 
     t0 = time.time()
@@ -84,16 +128,20 @@ def trainAndTest(dirpath, probeName, trainFeatures, trainLabels, testFeatures, t
 
     t3 = time.time()
 
-    message = f"""{name} finished.
+    trainingTime = t1-t0
+    testingTrainTime = t2-t1
+    testingTestTime = t3-t2
+
+    message = f"""{probe.name} finished.
     
     Accuracy:
     Train: {round(trainScore*100,3)}%
     Test: {round(testScore*100,3)}%
 
     Elapsed time:
-    Training: {time.strftime("%H:%M:%S", time.gmtime(t1-t0))}
-    Testing train dataset: {time.strftime("%H:%M:%S", time.gmtime(t2-t1))}
-    Testing test dataset: {time.strftime("%H:%M:%S", time.gmtime(t3-t2))}
+    Training: {time.strftime("%H:%M:%S", time.gmtime(trainingTime))}
+    Testing train dataset: {time.strftime("%H:%M:%S", time.gmtime(testingTrainTime))}
+    Testing test dataset: {time.strftime("%H:%M:%S", time.gmtime(testingTestTime))}
     Total elapsed time: {time.strftime("%H:%M:%S", time.gmtime(t3-t0))}"""
 
     telegramNotification.sendTelegram(message) # Report the results on Telegram
@@ -117,9 +165,9 @@ def trainAndTest(dirpath, probeName, trainFeatures, trainLabels, testFeatures, t
             \\multicolumn{2}{l}{\\textbf{Elapsed time:}} \\\\
             Training: & """
             
-    message += f"""{time.strftime("%H hour %M min %S sec", time.gmtime(t1-t0))} \\\\
-            Testing with train dataset: & {time.strftime("%H hour %M min %S sec", time.gmtime(t2-t1))} \\\\
-            Testing with test dataset: & {time.strftime("%H hour %M min %S sec", time.gmtime(t3-t2))} \\\\
+    message += f"""{time.strftime("%H hour %M min %S sec", time.gmtime(trainingTime))} \\\\
+            Testing with train dataset: & {time.strftime("%H hour %M min %S sec", time.gmtime(testingTrainTime))} \\\\
+            Testing with test dataset: & {time.strftime("%H hour %M min %S sec", time.gmtime(testingTestTime))} \\\\
             Total elapsed time: & {time.strftime("%H hour %M min %S sec", time.gmtime(t3-t0))} \\\\
             \\hline
             """
@@ -128,11 +176,12 @@ def trainAndTest(dirpath, probeName, trainFeatures, trainLabels, testFeatures, t
         \\end{center}
     """
 
-    with open(f"{dirpath}/results/{probeName}/{name}_Execution.txt","w+") as file:
+    with open(f"{dirpath}/results/{probeName}/{probe.name}_Execution.txt","w+") as file:
         file.write(message)
 
-    np.save(f"{dirpath}/results/{probeName}/{name}_TrainConfusionMatrix", trainConfusionMatrix)
-    np.save(f"{dirpath}/results/{probeName}/{name}_TestConfusionMatrix", testConfusionMatrix)
+    saveExecutionResults(probe.name,trainingTime,testingTrainTime,testingTestTime,trainScore,testScore,dirpath,probeName)
+    np.save(f"{dirpath}/results/{probeName}/{probe.name}_TrainConfusionMatrix", trainConfusionMatrix)
+    np.save(f"{dirpath}/results/{probeName}/{probe.name}_TestConfusionMatrix", testConfusionMatrix)
 
 def getUniqueLabels(list1):
 # This function returns a list of the labels that exist in the dataset
@@ -170,9 +219,11 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
     except:
         pass
 
+    probes2csv(probes,dirpath,probeName)
+
     # Create a dictionary number -> phoneme and save it for further checking
     phoneDict = datasetManipulation.getPhoneDict(scriptpath)
-    
+
     with open(f"{dirpath}/results/{probeName}/phoneDict.pkl","wb+") as file:
         pickle.dump(phoneDict,file)
 
@@ -184,7 +235,7 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
     testTable = testTableFile.root.data
 
     nExamples = np.shape(trainTable)[0]
-    
+
     trainBatch = trainTable[:]
     testBatch = testTable[:]
 
@@ -198,7 +249,7 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
     featureNames = ['w','Pw','Pr','z','r']
 
     rowSize = nChannels*nFeatures*(stackingWidth*2 + 1)
-    
+
     totalRemovedLabels = 0
 
     removedLabels = 0
@@ -223,7 +274,7 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
     # Separate labels (first column) from the features (rest of the columns)
     trainFeatures = trainBatch[:,1:]
     trainLabels = trainBatch[:,0]
-    
+
     testFeatures = testBatch[:,1:]
     testLabels = testBatch[:,0]
 
@@ -233,18 +284,20 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
     np.save(f"{dirpath}/results/{probeName}/uniqueLabels",uniqueLabels)
 
     # Create the description of the experiment
-    message = f"{probeName}:\n\nTrying:\n"
+    message = f"{probeName}:\nTrying:\n\n"
 
     for probe in probes:
+        message += f"Name: {probe.name}\n"
+
         if probe.reductionMethod == 'SelectKBest':
-            message += f"- SelectKBest with k={probe.n_features} and {probe.scoreFunction} function."
+            message += f"- SelectKBest with k={probe.n_features} and {probe.scoreFunction} function.\n"
         elif probe.reductionMethod == 'LDAReduction':
-            message += f"- LDA reduction with {probe.n_features}."
+            message += f"- LDA reduction with {probe.n_features} components.\n"
         else:
             print("Invalid reduction method")
             return
 
-        message += f" Classificating with {probe.classificationMethod}.\n"
+        message += f"- Classificating with '{probe.classificationMethod}'.\n"
 
         if probe.classificationMethod == 'bagging':
             message += f"   - n_estimators: {probe.n_estimators}\n"
@@ -266,10 +319,4 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
         elif probe.reductionMethod == "LDAReduction":
             reductedTrainFeatures, reductedTestFeatures = featureLDAReduction(probe.n_features, testFeatures, trainFeatures, trainLabels)
 
-        name = f"{probe.reductionMethod}{probe.scoreFunction}{probe.n_features}_{probe.classificationMethod}"
-
-        if probe.classificationMethod == 'bagging':
-            name += f"{probe.n_estimators}_{probe.min_samples_leaf}"
-
-        trainAndTest(dirpath, probeName, reductedTrainFeatures, trainLabels, reductedTestFeatures, testLabels, uniqueLabels, probe, name=name)
-
+        trainAndTest(dirpath, probeName, reductedTrainFeatures, trainLabels, reductedTestFeatures, testLabels, uniqueLabels, probe)
