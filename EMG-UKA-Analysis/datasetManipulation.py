@@ -8,7 +8,7 @@ import tables
 import time
 
 def getPhoneDict(scriptpath):
-    # This function creates a dictionary that links each label number with its corresponding phoneme.
+    # This function loads a dictionary that links each label number with its corresponding phoneme.
 
     phoneDict = {}
     
@@ -74,11 +74,11 @@ def removeSimplePhonemes(batch,phoneDict,reduceLabels=True):
     # The silence mark 'sp' is located at the end of simple marks
     # The transition marks are located after the silence marks 
     for key in sorted(phoneDict.keys()):
-        if phoneDict[key] == 'sp':
+        if ('-' in phoneDict[key]) or ('-' in phoneDict[key]):
             firstKey = key
             break
 
-    nz = batch[:,0] > firstKey
+    nz = batch[:,0] >= firstKey
     batch = batch[nz == True, :]
 
     # Remove transitions between silences
@@ -111,15 +111,26 @@ def removeTransitionPhonemes(batch,phoneDict):
     size0 = np.shape(batch)[0]
 
     # In the phoneme dictionary, the label 'no_label' and the simple phonemes are at the top of the list
-    # The silence marks 'sil' and 'sp' are located at the end of simple marks
-    # The transition marks are located after the silence marks 
+    # The transition phonemes contains a '+' or '-' mark, so the first transition phoneme is detected by looking if it contains any of those symbols
+    # The last considered phoneme is the one before the first transition phoneme 
     for key in sorted(phoneDict.keys()):
-        if phoneDict[key] == 'sil':
+        if ('+' in phoneDict[key]) or ('-' in phoneDict[key]):
             lastKey = key
             break
 
     nz = batch[:,0] < lastKey
     batch = batch[nz == True, :]
+
+    # Remove silence phonemes (sp and sil)
+    silenceLabels = []
+    for key in sorted(phoneDict.keys()):
+        if (phoneDict[key] == 'sil') or (phoneDict[key] == 'sp'):
+            silenceLabels.append(key)
+
+    nz = batch[:,0] == silenceLabels[0]
+    batch = batch[nz == False, :]
+    nz = batch[:,0] == silenceLabels[1]
+    batch = batch[nz == False, :]
 
     size1 = np.shape(batch)[0]
     removedExamples = size0 - size1

@@ -3,6 +3,15 @@ import numpy as np
 import pdb
 
 def estimateQ(model,X):
+	"""[summary]
+
+	Args:
+		model ([type]): [description]
+		X ([type]): [description]
+
+	Returns:
+		[type]: [description]
+	"""
 	Q = 0
 	N = np.shape(X)[0]
 	M = model.n_components
@@ -17,8 +26,15 @@ def estimateQ(model,X):
 	return Q
 
 def EMestimation(model,X):
-# This function implements the EM algorithm to find the weights, means and covariances that fit the data into
-# a GMM with M components
+	"""This function implements the EM algorithm to find the weights, means and covariances that fit the data into a GMM with M components
+
+	Args:
+		model ([type]): [description]
+		X ([type]): [description]
+
+	Returns:
+		[type]: [description]
+	"""
 
 	M = model.n_components
 	N = np.shape(X)[0]
@@ -102,9 +118,18 @@ def EMestimation(model,X):
 	return model
 
 def mergeCriteria(model,X):
-# This function calculates the merge criteria for every combination of components,
-# and returns the results into a symmetric matrix
-# It also finds which combination has the maximim vaue.
+	"""This function calculates the merge criteria for every combination of components,
+	and returns the results into a symmetric matrix
+	It also finds which combination has the maximim vaue.
+
+	Args:
+		model ([type]): [description]
+		X ([type]): [description]
+
+	Returns:
+		[type]: [description]
+	"""	""""""
+	
 
 	M = model.n_components
 
@@ -129,9 +154,27 @@ def mergeCriteria(model,X):
 	return mC, listOfCordinates[0]
 
 def kl_divergence(p, q):
+	"""[summary]
+
+	Args:
+		p ([type]): [description]
+		q ([type]): [description]
+
+	Returns:
+		[type]: [description]
+	"""
 	return np.sum(np.where(p != 0, p * np.log(p / q), 0))
 
 def splitCriteria(model,X):
+	"""[summary]
+
+	Args:
+		model ([type]): [description]
+		X ([type]): [description]
+
+	Returns:
+		[type]: [description]
+	"""
 
 	M = model.n_components
 	N = np.shape(X)[0]
