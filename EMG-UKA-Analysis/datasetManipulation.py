@@ -1,10 +1,8 @@
 from matplotlib import pyplot as plt
-import math
 import numpy as np
 import pandas as pd
 from sklearn.svm import OneClassSVM
 import seaborn as sns
-import tables
 import time
 
 def getPhoneDict(scriptpath):

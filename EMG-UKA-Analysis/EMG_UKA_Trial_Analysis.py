@@ -20,13 +20,13 @@ analyzedLabels = 'Simple' # 'All', 'Simple', 'Transitions' or 'PilotStudy'
 #gatherDataIntoTable.main(dirpath,uttType,'train')
 #gatherDataIntoTable.main(dirpath,uttType,'test')
 
-experimentName = 'ExperimentPrueba'
+experimentName = 'ExperimentBorrar'
 
 
 # Available reduction methods: 'SelectKBest', 'LDAReduction'
 # Available scoreFunction (only for 'SelectKBest'): 'f_classif', 'mutual_into_classif'
 # Available classificationMethods = 'GMMmodels', 'bagging'
-probes = [
+"""probes = [
    Probe(
        reductionMethod = 'LDAReduction',
        n_features = 38,
@@ -34,22 +34,21 @@ probes = [
        n_estimators = 100,
        min_samples_leaf = 50
        )
-]
+]"""
 
-"""probes = []
+probes = []
 
 for n_estimators in [10, 25, 50 ,75, 100]:
     for min_samples_leaf in [10, 25, 50, 75, 100]:
         probes.append(
             Probe(
-                reductionMethod = 'SelectKBest',
-                scoreFunction = 'mutual_info_classif',
-                n_features = 100,
+                reductionMethod = 'LDAReduction',
+                n_features = 38,
                 classificationMethod = 'bagging',
                 n_estimators = n_estimators,
                 min_samples_leaf = min_samples_leaf
             )
-        ) """
+        )
 
 try:
     featureSelectionProbe.main(dirpath,scriptpath,uttType,analyzedLabels,experimentName,probes)

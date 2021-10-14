@@ -37,7 +37,11 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <!-- Local TOC -->
               <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">classifiers module</a></li>
+<li><a class="reference internal" href="#">classifiers module</a><ul>
+<li><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li><a class="reference internal" href="#functions">Functions</a></li>
+</ul>
+</li>
 </ul>
 </div>
         </div>
@@ -66,6 +70,184 @@
              
   <section id="classifiers-module">
 <h1>classifiers module<a class="headerlink" href="#classifiers-module" title="Permalink to this headline"></a></h1>
+<section id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline"></a></h2>
+<p>The libraries needed to use this moddules are the following ones:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sklearn.mixture</span> <span class="kn">import</span> <span class="n">GaussianMixture</span> <span class="k">as</span> <span class="n">GMM</span>
+<span class="kn">from</span> <span class="nn">sklearn.tree</span> <span class="kn">import</span> <span class="n">DecisionTreeClassifier</span>
+<span class="kn">from</span> <span class="nn">sklearn.ensemble</span> <span class="kn">import</span> <span class="n">BaggingClassifier</span>
+</pre></div>
+</div>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this headline"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="classifiers.testClassifier">
+<span class="sig-prename descclassname"><span class="pre">classifiers.</span></span><span class="sig-name descname"><span class="pre">testClassifier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">clf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">testFeatures</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">testLabels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uniqueLabels</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#classifiers.testClassifier" title="Permalink to this definition"></a></dt>
+<dd><p>This function calculates the accuracy and saves the confusion matrix of the classification obtained with the given classifier.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>clf</strong> – A classifier from sklearn. It must be have the <cite>predict</cite> method, so it can perform predictions on input samples.</p></li>
+<li><p><strong>testFeatures</strong> (<em>numpy.ndarray</em>) – A matrix with the features of the subset the classifier is going to be tested with.</p></li>
+<li><p><strong>testLabels</strong> (<em>numpy.ndarray</em>) – An array with the features of the subset the classifier is going to be tested with.</p></li>
+<li><p><strong>uniqueLabels</strong> (<em>list</em>) – An array containing a list of the labels that were present in the training batch.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>tuple</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><p>(<strong>score</strong>,**confusionMatrix**)</p>
+<ul class="simple">
+<li><p><strong>score</strong> (<em>float</em>) - The accuracy resulting from testing the classifier with the given subset.</p></li>
+<li><p><strong>confusionMatrix</strong> (<em>numpy.ndarray</em>) . The confusion matrix resulting from testing the classifier with the given subset. It’s not normalized.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+<p>Example of use:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">load_iris</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.tree</span> <span class="kn">import</span> <span class="n">DecisionTreeClassifier</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">classifiers</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">featureSelectionProbe</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">load_iris</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trainFeatures</span><span class="p">,</span> <span class="n">testFeatures</span><span class="p">,</span> <span class="n">trainLabels</span><span class="p">,</span> <span class="n">testLabels</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">iris</span><span class="o">.</span><span class="n">data</span><span class="p">,</span><span class="n">iris</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.33</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">DecisionTreeClassifier</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">trainFeatures</span><span class="p">,</span><span class="n">trainLabels</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">uniqueLabels</span> <span class="o">=</span> <span class="n">featureSelectionProbe</span><span class="o">.</span><span class="n">getUniqueLabels</span><span class="p">(</span><span class="n">trainLabels</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">score</span><span class="p">,</span> <span class="n">confusionMatrix</span> <span class="o">=</span> <span class="n">classifiers</span><span class="o">.</span><span class="n">testClassifier</span><span class="p">(</span><span class="n">clf</span><span class="p">,</span> <span class="n">testFeatures</span><span class="p">,</span> <span class="n">testLabels</span><span class="p">,</span> <span class="n">uniqueLabels</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Achieved accuracy: </span><span class="si">{</span><span class="n">score</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="go">Achieved accuracy: 0.9</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">confusionMatrix</span><span class="p">)</span>
+<span class="go">[[17.  0.  0.]</span>
+<span class="go">[ 0. 12.  3.]</span>
+<span class="go">[ 0.  2. 16.]]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="classifiers.testGMMmodels">
+<span class="sig-prename descclassname"><span class="pre">classifiers.</span></span><span class="sig-name descname"><span class="pre">testGMMmodels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">models</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">testFeatures</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">testLabels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uniqueLabels</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#classifiers.testGMMmodels" title="Permalink to this definition"></a></dt>
+<dd><p>This function serves for testing the classifiers created with <a class="reference internal" href="#classifiers.trainGMMmodels" title="classifiers.trainGMMmodels"><code class="xref py py-func docutils literal notranslate"><span class="pre">classifiers.trainGMMmodels()</span></code></a>. This function calculates the accuracy and saves the confusion matrix of the classifier testing with the given subset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>models</strong> (<em>dict</em>) – A dictionary that contains GMM models (<code class="xref py py-class docutils literal notranslate"><span class="pre">sklearn.mixture.GaussianMixture</span></code>) obtained with the <a class="reference internal" href="#classifiers.trainGMMmodels" title="classifiers.trainGMMmodels"><code class="xref py py-func docutils literal notranslate"><span class="pre">classifiers.trainGMMmodels()</span></code></a>. There is a GMM model for each label, and the key is the number of the label.</p></li>
+<li><p><strong>testFeatures</strong> (<em>numpy.ndarray</em>) – A matrix with the features of the subset the classifier is going to be tested with.</p></li>
+<li><p><strong>testLabels</strong> (<em>numpy.ndarray</em>) – An array with the features of the subset the classifier is going to be tested with.</p></li>
+<li><p><strong>uniqueLabels</strong> (<em>list</em>) – An array containing a list of the labels that were present in the training batch.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>tuple</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><p>(<strong>score</strong>,**confusionMatrix**)</p>
+<ul class="simple">
+<li><p><strong>score</strong> (<em>float</em>) - The accuracy resulting from testing the classifier with the given subset.</p></li>
+<li><p><strong>confusionMatrix</strong> (<em>numpy.ndarray</em>) . The confusion matrix resulting from testing the classifier with the given subset. It’s not normalized.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+<p>Example of use:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">load_iris</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">classifiers</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">featureSelectionProbe</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">load_iris</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trainFeatures</span><span class="p">,</span> <span class="n">testFeatures</span><span class="p">,</span> <span class="n">trainLabels</span><span class="p">,</span> <span class="n">testLabels</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">iris</span><span class="o">.</span><span class="n">data</span><span class="p">,</span><span class="n">iris</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.33</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">uniqueLabels</span> <span class="o">=</span> <span class="n">featureSelectionProbe</span><span class="o">.</span><span class="n">getUniqueLabels</span><span class="p">(</span><span class="n">trainLabels</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">classifiers</span><span class="o">.</span><span class="n">trainGMMmodels</span><span class="p">(</span><span class="n">trainFeatures</span><span class="p">,</span><span class="n">trainLabels</span><span class="p">,</span><span class="n">uniqueLabels</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">score</span><span class="p">,</span> <span class="n">confusionMatrix</span> <span class="o">=</span> <span class="n">classifiers</span><span class="o">.</span><span class="n">testGMMmodels</span><span class="p">(</span><span class="n">clf</span><span class="p">,</span><span class="n">testFeatures</span><span class="p">,</span><span class="n">testLabels</span><span class="p">,</span><span class="n">uniqueLabels</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Achieved accuracy: </span><span class="si">{</span><span class="n">score</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="go">Achieved accuracy: 0.98</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">confusionMatrix</span><span class="p">)</span>
+<span class="go">[[18.  0.  0.]</span>
+<span class="go">[ 0. 13.  1.]</span>
+<span class="go">[ 0.  0. 18.]]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="classifiers.trainBaggingClassifier">
+<span class="sig-prename descclassname"><span class="pre">classifiers.</span></span><span class="sig-name descname"><span class="pre">trainBaggingClassifier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">trainFeatures</span></em>, <em class="sig-param"><span class="pre">trainLabels</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">n_estimators=10</span></em>, <em class="sig-param"><span class="pre">min_samples_leaf=10</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#classifiers.trainBaggingClassifier" title="Permalink to this definition"></a></dt>
+<dd><p>This function trains a bagging classifier with the given subset. The base classifier is <code class="xref py py-class docutils literal notranslate"><span class="pre">sklearn.tree.DecisionTreeClassifier</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>trainFeatures</strong> (<em>numpy.ndarray</em>) – A matrix with the features of the subset the classifier is going to be trained with.</p></li>
+<li><p><strong>trainLabels</strong> (<em>numpy.ndarray</em>) – An array with the features of the subset the classifier is going to be trained with.</p></li>
+<li><p><strong>n_estimators</strong> (<em>int</em><em>, </em><em>default=10</em>) – The number of base estimators in the ensemble.</p></li>
+<li><p><strong>min_samples_leaf</strong> (<em>int</em><em> or </em><em>float</em>) – The minimum number of samples required to be at a leaf node. A split point at any depth will only be considered if it leaves at least <code class="docutils literal notranslate"><span class="pre">min_samples_leaf</span></code> training samples in each of the left and right branches. This may have the effect of smoothing the model, especially in regression.
+* If int, then consider <code class="docutils literal notranslate"><span class="pre">min_samples_leaf</span></code> as the minimum number.
+* If float, then <code class="docutils literal notranslate"><span class="pre">min_samples_leaf</span></code> is a fraction and <code class="docutils literal notranslate"><span class="pre">ceil(min_samples_leaf</span> <span class="pre">*</span> <span class="pre">n_samples)</span></code> are the minimum number of samples for each node.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>&lt;class ‘sklearn.ensemble._bagging.BaggingClassifier’&gt;</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A trained bagging classifier.</p>
+</dd>
+</dl>
+<p>Example of use:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">load_iris</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">classifiers</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">featureSelectionProbe</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">load_iris</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trainFeatures</span><span class="p">,</span> <span class="n">testFeatures</span><span class="p">,</span> <span class="n">trainLabels</span><span class="p">,</span> <span class="n">testLabels</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">iris</span><span class="o">.</span><span class="n">data</span><span class="p">,</span><span class="n">iris</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.33</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">classifiers</span><span class="o">.</span><span class="n">trainBaggingClassifier</span><span class="p">(</span><span class="n">trainFeatures</span><span class="p">,</span> <span class="n">trainLabels</span><span class="p">,</span> <span class="n">n_estimators</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">min_samples_leaf</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">type</span><span class="p">(</span><span class="n">clf</span><span class="p">)</span>
+<span class="go">&lt;class &#39;sklearn.ensemble._bagging.BaggingClassifier&#39;&gt;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="classifiers.trainGMMmodels">
+<span class="sig-prename descclassname"><span class="pre">classifiers.</span></span><span class="sig-name descname"><span class="pre">trainGMMmodels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trainFeatures</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trainLabels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uniqueLabels</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#classifiers.trainGMMmodels" title="Permalink to this definition"></a></dt>
+<dd><p>This function trains many GMM models for each label and saves the one that minimizes the Bayesian Information Criterion. It returns the optimal GMM model for each feature into a dictionary, whose keys are the label.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>trainFeatures</strong> (<em>numpy.ndarray</em>) – A matrix with the features of the subset the classifier is going to be trained with.</p></li>
+<li><p><strong>trainLabels</strong> (<em>numpy.ndarray</em>) – An array with the features of the subset the classifier is going to be trained with.</p></li>
+<li><p><strong>uniqueLabels</strong> (<em>list</em>) – An array containing a list of the labels that were present in the training batch.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A dictionary whose keys are the labels and the content is a GMM model (<code class="xref py py-class docutils literal notranslate"><span class="pre">sklearn.mixture.GaussianMixture</span></code>) for each label.</p>
+</dd>
+</dl>
+<p>Example of use:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.datasets</span> <span class="kn">import</span> <span class="n">load_iris</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">classifiers</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">featureSelectionProbe</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># %%</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">iris</span> <span class="o">=</span> <span class="n">load_iris</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trainFeatures</span><span class="p">,</span> <span class="n">testFeatures</span><span class="p">,</span> <span class="n">trainLabels</span><span class="p">,</span> <span class="n">testLabels</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">iris</span><span class="o">.</span><span class="n">data</span><span class="p">,</span><span class="n">iris</span><span class="o">.</span><span class="n">target</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.33</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">uniqueLabels</span> <span class="o">=</span> <span class="n">featureSelectionProbe</span><span class="o">.</span><span class="n">getUniqueLabels</span><span class="p">(</span><span class="n">trainLabels</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clf</span> <span class="o">=</span> <span class="n">classifiers</span><span class="o">.</span><span class="n">trainGMMmodels</span><span class="p">(</span><span class="n">trainFeatures</span><span class="p">,</span><span class="n">trainLabels</span><span class="p">,</span><span class="n">uniqueLabels</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">([</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">clf</span><span class="o">.</span><span class="n">keys</span><span class="p">()])</span>
+<span class="go">[0, 1, 2]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">([</span><span class="n">clf</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">clf</span><span class="o">.</span><span class="n">keys</span><span class="p">()])</span>
+<span class="go">[GaussianMixture(random_state=0), GaussianMixture(random_state=0), GaussianMixture(random_state=0)]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
 </section>
 
 
