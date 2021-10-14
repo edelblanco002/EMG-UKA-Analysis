@@ -86,7 +86,7 @@ Functions
    This function uses the :func:`sklearn.svm.OneClassSVM` function to detect outliers and remove them.
 
    .. warning::
-      This function have not be proben to remove the outlier in an effective way.
+      This function have not be proben to remove the outlier values in an effective way.
 
    :param batch: A numpy matrix. The first column corresponds to the labls and the rest of the columns correspond to features.
    :type batch: numpy.ndarray
