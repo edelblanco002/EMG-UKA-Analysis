@@ -6,6 +6,19 @@ datasetManipulation module
    :undoc-members:
    :show-inheritance:
 
+Dependencies
+------------
+
+The following imports are necessary to use this module::
+
+   from matplotlib import pyplot as plt
+   import numpy as np
+   import pandas as pd
+   from sklearn.svm import OneClassSVM
+   import seaborn as sns
+   import tables
+   import time
+
 Functions
 ---------
 
