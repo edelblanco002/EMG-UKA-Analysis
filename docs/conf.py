@@ -12,7 +12,7 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('.'))
 
 
 # -- Project information -----------------------------------------------------
@@ -30,10 +30,7 @@ release = '1'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon'
-]
+extensions = []
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -60,7 +57,7 @@ html_static_path = ['_static']
 # -- Extension configuration -------------------------------------------------
 
 # Napoleon settings
-napoleon_google_docstring = True
+"""napoleon_google_docstring = True
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
 napoleon_include_private_with_doc = False
@@ -75,9 +72,9 @@ napoleon_preprocess_types = False
 napoleon_type_aliases = None
 napoleon_attr_annotations = True
 
-autosummary_generate = True
+autosummary_generate = True"""
 
-autodoc_default_options = {
+""" autodoc_default_options = {
     'members': True,
     # The ones below should be optional but work nicely together with
     # example_package/autodoctest/doc/source/_templates/autosummary/class.rst
@@ -85,4 +82,4 @@ autodoc_default_options = {
     'show-inheritance': True,
     'inherited-members': True,
     'no-special-members': True,
-}
+} """
