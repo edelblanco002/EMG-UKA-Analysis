@@ -37,7 +37,12 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <!-- Local TOC -->
               <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">classifierEvaluation module</a></li>
+<li><a class="reference internal" href="#">classifierEvaluation module</a><ul>
+<li><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li><a class="reference internal" href="#classes">Classes</a></li>
+<li><a class="reference internal" href="#functions">Functions</a></li>
+</ul>
+</li>
 </ul>
 </div>
         </div>
@@ -66,6 +71,269 @@
              
   <section id="classifierevaluation-module">
 <h1>classifierEvaluation module<a class="headerlink" href="#classifierevaluation-module" title="Permalink to this headline"></a></h1>
+<section id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline"></a></h2>
+<p>The following imports are necessary to use this module:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+</pre></div>
+</div>
+</section>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Permalink to this headline"></a></h2>
+<blockquote>
+<div><dl class="py class">
+<dt class="sig sig-object py" id="classifierEvaluation.LabelOutcome">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">classifierEvaluation.</span></span><span class="sig-name descname"><span class="pre">LabelOutcome</span></span><span class="sig-paren">(</span><span class="optional">[</span><em class="sig-param"><span class="pre">TP=0</span></em>, <em class="sig-param"><span class="pre">TN=0</span></em>, <em class="sig-param"><span class="pre">FP=0</span></em>, <em class="sig-param"><span class="pre">FN=0</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.LabelOutcome" title="Permalink to this definition"></a></dt>
+<dd><p>This class stores the number of true positives, true negatives, false positives and false negatives for one class obtained from testing a classifier with a set of examples, and calculates some outcomes with those data. The object can be created with its attributes or add them later.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TP</strong> (<em>int</em><em>, </em><em>default=0</em>) – Number of true positives.</p></li>
+<li><p><strong>TN</strong> (<em>int</em><em>, </em><em>default=0</em>) – Number of true negatives.</p></li>
+<li><p><strong>FP</strong> (<em>int</em><em>, </em><em>default=0</em>) – Number of false positives.</p></li>
+<li><p><strong>FN</strong> (<em>int</em><em>, </em><em>default=0</em>) – Number of false negatives.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="classifierEvaluation.LabelOutcome.setTP">
+<span class="sig-name descname"><span class="pre">setTP</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">TP</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.LabelOutcome.setTP" title="Permalink to this definition"></a></dt>
+<dd><p>This method sets the number of true positives.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>TP</strong> (<em>int</em>) – Number of true positives.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="classifierEvaluation.LabelOutcome.setTN">
+<span class="sig-name descname"><span class="pre">setTN</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">TN</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.LabelOutcome.setTN" title="Permalink to this definition"></a></dt>
+<dd><p>This method sets the number of true negatives.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>TN</strong> (<em>int</em>) – Number of true negatives.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="classifierEvaluation.LabelOutcome.setFP">
+<span class="sig-name descname"><span class="pre">setFP</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">FP</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.LabelOutcome.setFP" title="Permalink to this definition"></a></dt>
+<dd><p>This method sets the number of false positives.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>FP</strong> (<em>int</em>) – Number of false positives.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="classifierEvaluation.LabelOutcome.setFN">
+<span class="sig-name descname"><span class="pre">setFN</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">FN</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.LabelOutcome.setFN" title="Permalink to this definition"></a></dt>
+<dd><p>This method sets the number of false negatives.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>FN</strong> (<em>int</em>) – Number of false negatives.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="classifierEvaluation.LabelOutcome.getTP">
+<span class="sig-name descname"><span class="pre">getTP</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.LabelOutcome.getTP" title="Permalink to this definition"></a></dt>
+<dd><p>This method returns the number of true positives.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The number of true positives.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="classifierEvaluation.LabelOutcome.getTN">
+<span class="sig-name descname"><span class="pre">getTN</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.LabelOutcome.getTN" title="Permalink to this definition"></a></dt>
+<dd><p>This method returns the number of true negatives.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The number of true negatives.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="classifierEvaluation.LabelOutcome.getFP">
+<span class="sig-name descname"><span class="pre">getFP</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.LabelOutcome.getFP" title="Permalink to this definition"></a></dt>
+<dd><p>This method returns the number of false positives.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The number of false positives.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="classifierEvaluation.LabelOutcome.getFN">
+<span class="sig-name descname"><span class="pre">getFN</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.LabelOutcome.getFN" title="Permalink to this definition"></a></dt>
+<dd><p>This method returns the number of false negatives.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The number of false negatives.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="classifierEvaluation.LabelOutcome.getTotalPopulation">
+<span class="sig-name descname"><span class="pre">getTotalPopulation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.LabelOutcome.getTotalPopulation" title="Permalink to this definition"></a></dt>
+<dd><p>This method returns the total numbers of examples that have been classified.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The number of false negatives.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="classifierEvaluation.LabelOutcome.getSensitivity">
+<span class="sig-name descname"><span class="pre">getSensitivity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.LabelOutcome.getSensitivity" title="Permalink to this definition"></a></dt>
+<dd><p>This method returns the sensitivity of the class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The sensitivity of the class.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="classifierEvaluation.LabelOutcome.getSpecificity">
+<span class="sig-name descname"><span class="pre">getSpecificity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.LabelOutcome.getSpecificity" title="Permalink to this definition"></a></dt>
+<dd><p>This method returns the specificity of the class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The specificity of the class.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div></blockquote>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this headline"></a></h2>
+<blockquote>
+<div><dl class="py function">
+<dt class="sig sig-object py" id="classifierEvaluation.loadProbeResults">
+<span class="sig-prename descclassname"><span class="pre">classifierEvaluation.</span></span><span class="sig-name descname"><span class="pre">loadProbeResults</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dirPath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scriptPath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">experimentName</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.loadProbeResults" title="Permalink to this definition"></a></dt>
+<dd><p>This function loads the confusion matrix, the phone dict and the list of unique labels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dirPath</strong> (<em>str</em>) – The base path of the corpus that is going to be analyzed.</p></li>
+<li><p><strong>scriptPath</strong> (<em>str</em>) – The path where the <code class="docutils literal notranslate"><span class="pre">EMG-UKA-Analysis</span></code> scripts are saved.</p></li>
+<li><p><strong>experimentName</strong> (<em>str</em>) – The name of the set of experiments that are being executed.</p></li>
+<li><p><strong>probe</strong> (&lt;<code class="xref py py-class docutils literal notranslate"><span class="pre">featureSelectionProbe.Probe</span></code>&gt;) – The probe that is being analyzed.</p></li>
+<li><p><strong>subset</strong> (<em>str</em>) – The subset that is being analyzed (‘Train’ or ‘Test’).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>tuple</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><p>(<strong>confusionMatrix</strong>, <strong>phoneDict</strong>, <strong>uniqueLabels</strong>, <strong>uniquePhones</strong>)</p>
+<ul class="simple">
+<li><p><strong>confusionMatrix</strong> (<em>numpy.ndarray</em>) - The confusion matrix resulting from testing the classifier with the given subset. It’s not normalized.</p></li>
+<li><p><strong>phoneDict</strong> (<em>dict</em>) - A dictionary that saves the relations between the name of the label and the number assigned to it. The keys are the numbers corresponding to the labels and the returned values are the labels as strings.</p></li>
+<li><p><strong>uniqueLabels</strong> (<em>list</em>) - A list of the labels that were present in the training batch.</p></li>
+<li><p><strong>uniquePhones</strong> (<em>list</em>) - A list of the phonemes that were present in the training batch. It is the same as <code class="docutils literal notranslate"><span class="pre">uniqueLabels</span></code>, but it contains the phonemes in <code class="docutils literal notranslate"><span class="pre">str</span></code> format instead of numeric labels.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="classifierEvaluation.drawConfusionMatrix">
+<span class="sig-prename descclassname"><span class="pre">classifierEvaluation.</span></span><span class="sig-name descname"><span class="pre">drawConfusionMatrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dirPath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scriptPath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">experimentName</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.drawConfusionMatrix" title="Permalink to this definition"></a></dt>
+<dd><p>This function draws a normalized confusion matrix and export the resulting figure as a <code class="docutils literal notranslate"><span class="pre">.png</span></code> image. This image will be saved into the <code class="docutils literal notranslate"><span class="pre">{dirPath}/results/{experimentName}</span></code> folder.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dirPath</strong> (<em>str</em>) – The base path of the corpus that is going to be analyzed.</p></li>
+<li><p><strong>scriptPath</strong> (<em>str</em>) – The path where the <code class="docutils literal notranslate"><span class="pre">EMG-UKA-Analysis</span></code> scripts are saved.</p></li>
+<li><p><strong>experimentName</strong> (<em>str</em>) – The name of the set of experiments that are being executed.</p></li>
+<li><p><strong>probe</strong> (&lt;<code class="xref py py-class docutils literal notranslate"><span class="pre">featureSelectionProbe.Probe</span></code>&gt;) – The probe that is being analyzed.</p></li>
+<li><p><strong>subset</strong> (<em>str</em>) – The subset that is being analyzed (‘Train’ or ‘Test’).</p></li>
+</ul>
+</dd>
+</dl>
+<p>The imagen will be similar to this:</p>
+<a class="reference internal image-reference" href="_images/confusionMatrixExample.png"><img alt="_images/confusionMatrixExample.png" src="_images/confusionMatrixExample.png" style="width: 600px;" /></a>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="classifierEvaluation.getOutcomes">
+<span class="sig-prename descclassname"><span class="pre">classifierEvaluation.</span></span><span class="sig-name descname"><span class="pre">getOutcomes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dirPath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scriptPath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">experimentName</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.getOutcomes" title="Permalink to this definition"></a></dt>
+<dd><p>This function generates a text file with a table in LaTeX format (tabular) that contains the outcomes for each label: True Positives, True Negatives, False Positives, False Negatives, Sensitivity, Specificity, Precision and Recall. The text file will be saved into the <code class="docutils literal notranslate"><span class="pre">{dirPath}/results/{experimentName}</span></code> folder.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dirPath</strong> (<em>str</em>) – The base path of the corpus that is going to be analyzed.</p></li>
+<li><p><strong>scriptPath</strong> (<em>str</em>) – The path where the <code class="docutils literal notranslate"><span class="pre">EMG-UKA-Analysis</span></code> scripts are saved.</p></li>
+<li><p><strong>experimentName</strong> (<em>str</em>) – The name of the set of experiments that are being executed.</p></li>
+<li><p><strong>probe</strong> (&lt;<code class="xref py py-class docutils literal notranslate"><span class="pre">featureSelectionProbe.Probe</span></code>&gt;) – The probe that is being analyzed.</p></li>
+<li><p><strong>subset</strong> (<em>str</em>) – The subset that is being analyzed (‘Train’ or ‘Test’).</p></li>
+</ul>
+</dd>
+</dl>
+<p>When the obtained text file is inserted into a LaTeX, the table in the compiled document will look like this:</p>
+<img alt="_images/outcomesTableExample.png" src="_images/outcomesTableExample.png" />
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="classifierEvaluation.main">
+<span class="sig-prename descclassname"><span class="pre">classifierEvaluation.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dirPath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scriptPath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">experimentName</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#classifierEvaluation.main" title="Permalink to this definition"></a></dt>
+<dd><p>This is the main function of the module. It draws a confusion matrix and creates an outcome table for train and test subset for every probe programed in the execution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dirPath</strong> (<em>str</em>) – The base path of the corpus that is going to be analyzed.</p></li>
+<li><p><strong>scriptPath</strong> (<em>str</em>) – The path where the <code class="docutils literal notranslate"><span class="pre">EMG-UKA-Analysis</span></code> scripts are saved.</p></li>
+<li><p><strong>experimentName</strong> (<em>str</em>) – The name of the set of experiments that are being executed.</p></li>
+<li><p><strong>probe</strong> (&lt;<code class="xref py py-class docutils literal notranslate"><span class="pre">featureSelectionProbe.Probe</span></code>&gt;) – The probe that is being analyzed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div></blockquote>
+</section>
 </section>
 
 

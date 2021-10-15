@@ -1,11 +1,10 @@
-from featureSelectionProbe import Probe
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pickle
 import seaborn as sns
 
-class labelOutcome:
+class LabelOutcome:
     # The object can be created with its attributes or add them later
     def __init__(self,TP=0,TN=0,FP=0,FN=0):
         self.__TP = TP
@@ -97,7 +96,7 @@ def getOutcomes(dirpath,scriptpath,experimentName,probe,subset):
     outcomes = {} # The outcomes of each label are saved in a dictionary, whose keys are the phoneme that corresponds to each label
     
     for i in range(len(uniquePhones)):
-        outcome = labelOutcome()
+        outcome = LabelOutcome()
         
         TP = confusionMatrix[i,i] # True Positives: Predicted label = True label
         FP = confusionMatrix.sum(axis=0)[i]-TP # False Positives: The sum of the column corresponding to one predicted label (every examples classified as that label) minus the correct labeled examples (True Positives)
