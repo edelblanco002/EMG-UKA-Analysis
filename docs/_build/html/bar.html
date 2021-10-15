@@ -37,7 +37,10 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <!-- Local TOC -->
               <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">bar module</a></li>
+<li><a class="reference internal" href="#">bar module</a><ul>
+<li><a class="reference internal" href="#functions">Functions</a></li>
+</ul>
+</li>
 </ul>
 </div>
         </div>
@@ -66,6 +69,45 @@
              
   <section id="bar-module">
 <h1>bar module<a class="headerlink" href="#bar-module" title="Permalink to this headline"></a></h1>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this headline"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="printProgressBar">
+<span class="sig-name descname"><span class="pre">printProgressBar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">iteration</span></em>, <em class="sig-param"><span class="pre">total</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">prefix</span> <span class="pre">=</span> <span class="pre">''</span></em>, <em class="sig-param"><span class="pre">suffix</span> <span class="pre">=</span> <span class="pre">''</span></em>, <em class="sig-param"><span class="pre">decimals</span> <span class="pre">=</span> <span class="pre">1</span></em>, <em class="sig-param"><span class="pre">length</span> <span class="pre">=</span> <span class="pre">100</span></em>, <em class="sig-param"><span class="pre">fill</span> <span class="pre">=</span> <span class="pre">'█'</span></em>, <em class="sig-param"><span class="pre">printEnd</span> <span class="pre">=</span> <span class="pre">&quot;\r&quot;</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#printProgressBar" title="Permalink to this definition"></a></dt>
+<dd><p>Call in a loop to create terminal progress bar.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This function has been copied from <a class="reference external" href="https://gist.github.com/greenstick/b23e475d2bfdc3a82e34eaa1f6781ee4">https://gist.github.com/greenstick/b23e475d2bfdc3a82e34eaa1f6781ee4</a>.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>iteration</strong> (<em>int</em>) – Current iteration.</p></li>
+<li><p><strong>total</strong> (<em>int</em>) – Total iterations.</p></li>
+<li><p><strong>prefix</strong> (<em>str</em><em>, </em><em>default=''</em>) – Prefix string.</p></li>
+<li><p><strong>suffix</strong> (<em>str</em><em>, </em><em>default=''</em>) – Suffix string.</p></li>
+<li><p><strong>decimals</strong> (<em>int</em><em>, </em><em>default=1</em>) – Positive number of decimals in percent complete.</p></li>
+<li><p><strong>length</strong> (<em>int</em><em>, </em><em>default=100</em>) – Character length of bar.</p></li>
+<li><p><strong>fill</strong> (<em>str</em><em>, </em><em>default='█'</em>) – Bar fill character.</p></li>
+<li><p><strong>printEnd</strong> (<em>str</em><em>, </em><em>default='r'</em>) – End character (e.g. “r” “rn”)</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example of use:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">bar</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">totalIterations</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">totalIterations</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">bar</span><span class="o">.</span><span class="n">printProgressBar</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">totalIterations</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;Progress: &#39;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;completed&#39;</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">printEnd</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\r\n</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="go">Progress:  |--------------------------------------------------| 0.0% completed</span>
+<span class="go">Progress:  |████████████████----------------------------------| 33.3% completed</span>
+<span class="go">Progress:  |█████████████████████████████████-----------------| 66.7% completed</span>
+<span class="go">Progress:  |██████████████████████████████████████████████████| 100.0% completed</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
 </section>
 
 
