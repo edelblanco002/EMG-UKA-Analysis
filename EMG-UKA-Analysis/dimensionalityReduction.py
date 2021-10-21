@@ -19,7 +19,7 @@ def featureSelection(nFeatures, method, trainFeatures, testFeatures, trainLabels
     newTestFeatures = selector.transform(testFeatures) # Reduce the features of the test set in consonance
 
     colNames = drawBarPlot.getColNames(nChannels,stackingWidth,featureNames) # Obtain the name of all the features
-    ranking = drawBarPlot.printRanking(dirpath,selector.scores_,colNames,nFeatures,method) # Obtain the ranking of the selected features as a string
+    ranking = drawBarPlot.printRanking(selector.scores_,colNames,nFeatures,method) # Obtain the ranking of the selected features as a string
 
     t1 = time.time()
 
@@ -35,7 +35,7 @@ def featureSelection(nFeatures, method, trainFeatures, testFeatures, trainLabels
 
     return newTrainFeatures, newTestFeatures
 
-def featureLDAReduction(nComponents, testFeatures, trainFeatures, trainLabels):
+def featureLDAReduction(nComponents, trainFeatures, testFeatures, trainLabels):
     # This function performons the LDA reduction of the features
 
     t0 = time.time()

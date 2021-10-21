@@ -317,6 +317,6 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
         if probe.reductionMethod == "SelectKBest":
             reductedTrainFeatures, reductedTestFeatures = featureSelection(probe.n_features, probe.scoreFunction, trainFeatures, testFeatures, trainLabels, featureNames, nChannels, stackingWidth, dirpath,probeName)
         elif probe.reductionMethod == "LDAReduction":
-            reductedTrainFeatures, reductedTestFeatures = featureLDAReduction(probe.n_features, testFeatures, trainFeatures, trainLabels)
+            reductedTrainFeatures, reductedTestFeatures = featureLDAReduction(probe.n_features, trainFeatures, testFeatures, trainLabels)
 
         trainAndTest(dirpath, probeName, reductedTrainFeatures, trainLabels, reductedTestFeatures, testLabels, uniqueLabels, probe)

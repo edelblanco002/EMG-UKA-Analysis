@@ -32,11 +32,10 @@ def getColNames(channelN,stackingWidth,featureNames):
 
     return colNames
 
-def getIndexesDataFrame(scores, colNames):
+def getIndexesDataFrame(scores, colNames,maxPosition=4):
     # This function creates a DataFrame with the count of how many times has been ranked each feature in the n position
 
-    # Last position considered. If 3 is selected, only is going to be count how many times each feature has been ranked in the first, second or third position
-    maxPosition = 4
+    # maxPosition is the last position considered. If 3 is selected, only is going to be count how many times each feature has been ranked in the first, second or third position
 
     maxIndexesMatrix = np.zeros((maxPosition,len(colNames)),dtype=int)
     
@@ -54,15 +53,13 @@ def getIndexesDataFrame(scores, colNames):
     
     return df
 
-def printRanking(dirpath,scores,colNames,maxPosition,scoresName,latexFormat=True):
+def printRanking(scores,colNames,maxPosition,scoresName,latexFormat=True):
     # This function returns a ranking with the highest scores as a string that can be displayed or saved to a file.
     # If latexFormat = True, the ranking will be written as a LaTeX tabular, so it can be inserted directly in a document.
     # If latexFormat = False, the ranking will be written as plain text
 
     ranking = ""
     sortedScores = sorted(scores)
-
-    
 
     if latexFormat:
         ranking += '\\begin{tabular}{|c|c|c|c|c|}\n\\hline\n'
@@ -78,7 +75,7 @@ def printRanking(dirpath,scores,colNames,maxPosition,scoresName,latexFormat=True
             ranking += "\t\\hline\n"
         ranking += '\\end{tabular}'
     else:
-        ranking += f"Score ranking for {scoresName}"
+        ranking += f"Score ranking for {scoresName}\n"
 
         ranking += "{:<8} {:<15} {:<15}\n".format('Position','Feature','Score')
         for i in range(1,maxPosition+1):
@@ -92,10 +89,13 @@ def printRanking(dirpath,scores,colNames,maxPosition,scoresName,latexFormat=True
     ranking = ranking.replace('& Pr &','& $P_r$ &')
     return ranking
 
-def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',fileBase='audibleAll'):
+def main(dirPath,uttType,analyzedLabels):
+
+    fileBase = uttType + analyzedLabels
+
     # Load scores from numpy files
-    scoresFClass = np.load(dirpath + f'/scoresFClass{fileBase}.npy')
-    scoresMutual = np.load(dirpath + f'/scoresMutual{fileBase}.npy')
+    scoresFClass = np.load(dirPath + f'/scoresFClass{fileBase}.npy')
+    scoresMutual = np.load(dirPath + f'/scoresMutual{fileBase}.npy')
     
     channelN = 6
     stackingWidth = 15
@@ -106,8 +106,8 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',fileBase='audi
     # If the scores have been calculated by processing all examples at the same time (1 big single batch)
     # Don't draw bar plot, just print the ranking
     if np.shape(scoresFClass)[0] == 1:
-        print(printRanking(dirpath,scoresFClass,colNames,15,'f_classif'))
-        print(printRanking(dirpath,scoresMutual,colNames,15,'mutual_info_classif'))
+        print(printRanking(scoresFClass,colNames,15,'f_classif'))
+        print(printRanking(scoresMutual,colNames,15,'mutual_info_classif'))
     # If examples have been divided in multple batches
     # Draw bar plot
     else:

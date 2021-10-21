@@ -37,7 +37,11 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <!-- Local TOC -->
               <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">dimensionalityReduction module</a></li>
+<li><a class="reference internal" href="#">dimensionalityReduction module</a><ul>
+<li><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li><a class="reference internal" href="#functions">Functions</a></li>
+</ul>
+</li>
 </ul>
 </div>
         </div>
@@ -66,6 +70,175 @@
              
   <section id="dimensionalityreduction-module">
 <h1>dimensionalityReduction module<a class="headerlink" href="#dimensionalityreduction-module" title="Permalink to this headline"></a></h1>
+<section id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline"></a></h2>
+<p>The libraries that are necessary for using this module are the following ones:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">drawBarPlot</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sklearn.discriminant_analysis</span> <span class="kn">import</span> <span class="n">LinearDiscriminantAnalysis</span>
+<span class="kn">from</span> <span class="nn">sklearn.feature_selection</span> <span class="kn">import</span> <span class="n">SelectKBest</span><span class="p">,</span> <span class="n">f_classif</span><span class="p">,</span> <span class="n">mutual_info_classif</span>
+<span class="kn">import</span> <span class="nn">time</span>
+</pre></div>
+</div>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this headline"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="dimensionalityReduction.featureSelection">
+<span class="sig-prename descclassname"><span class="pre">dimensionalityReduction.</span></span><span class="sig-name descname"><span class="pre">featureSelection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nFeatures</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trainFeatures</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">testFeatures</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trainLabels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">featureNames</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nChannels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stackingWidth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dirPath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probeName</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dimensionalityReduction.featureSelection" title="Permalink to this definition"></a></dt>
+<dd><p>This function calculates some scores with the given score function and selects the <code class="docutils literal notranslate"><span class="pre">nFeatures</span></code> features with the highest scores. It also saves a table with the selected features sorted by the score given to them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nFeatures</strong> (<em>int</em>) – Number of features wanted as output.</p></li>
+<li><p><strong>method</strong> (<em>str</em>) – The selected score function. The allowed values are <code class="docutils literal notranslate"><span class="pre">f_classif</span></code> and <code class="docutils literal notranslate"><span class="pre">mutual_info_classif</span></code>.</p></li>
+<li><p><strong>trainFeatures</strong> (<em>numpy.ndarray</em>) – The features from the training subset.</p></li>
+<li><p><strong>testFeatures</strong> (<em>numpy.ndarray</em>) – The features from the testing subset.</p></li>
+<li><p><strong>trainLabels</strong> (<em>numpu.ndarray</em>) – The labels from the training subset.</p></li>
+<li><p><strong>featureNames</strong> (<em>list</em>) – The names given to each kind of feature in every frame.</p></li>
+<li><p><strong>nChannels</strong> (<em>int</em>) – Number of channels that are being analyzed.</p></li>
+<li><p><strong>stackingWidth</strong> (<em>int</em>) – Number of frames stacked in the stacking filter. It has to be kept in mind that this is the number stacked to each side of the central frame, so the total number of frames is <code class="docutils literal notranslate"><span class="pre">2*nFeatures</span> <span class="pre">+</span> <span class="pre">1</span></code>.</p></li>
+<li><p><strong>dirPath</strong> (<em>str</em>) – The base path to the analyzed corpus.</p></li>
+<li><p><strong>probeName</strong> (<em>str</em>) – Name given to the probe. This is the name of the subfolder in the forder <code class="docutils literal notranslate"><span class="pre">Results</span></code> where the results of the experiments will be saved.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example of use:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">datasetManipulation</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dimensionalityReduction</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;batch.npy&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch</span> <span class="o">=</span> <span class="n">datasetManipulation</span><span class="o">.</span><span class="n">removeNaN</span><span class="p">(</span><span class="n">batch</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">labels</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trainFeatures</span><span class="p">,</span> <span class="n">testFeatures</span><span class="p">,</span> <span class="n">trainLabels</span><span class="p">,</span> <span class="n">testLabels</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">features</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.33</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nFeatures</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">method</span> <span class="o">=</span> <span class="s1">&#39;f_classif&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nChannels</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stackingWidth</span> <span class="o">=</span> <span class="mi">15</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">featureNames</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;w&#39;</span><span class="p">,</span><span class="s1">&#39;Pw&#39;</span><span class="p">,</span><span class="s1">&#39;Pr&#39;</span><span class="p">,</span><span class="s1">&#39;z&#39;</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">probeName</span> <span class="o">=</span> <span class="s1">&#39;TestExperiment&#39;</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">trainFeatures</span><span class="p">))</span> <span class="c1"># Size of train features</span>
+<span class="go">(70526, 930)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">testFeatures</span><span class="p">))</span> <span class="c1"># Size of test features</span>
+<span class="go">(34737, 930)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">reducedTrainFeatures</span><span class="p">,</span> <span class="n">reducedTestFeatures</span> <span class="o">=</span> <span class="n">dimensionalityReduction</span><span class="o">.</span><span class="n">featureSelection</span><span class="p">(</span><span class="n">nFeatures</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">trainFeatures</span><span class="p">,</span> <span class="n">testFeatures</span><span class="p">,</span> <span class="n">trainLabels</span><span class="p">,</span> <span class="n">featureNames</span><span class="p">,</span> <span class="n">nChannels</span><span class="p">,</span> <span class="n">stackingWidth</span><span class="p">,</span> <span class="n">dirPath</span><span class="p">,</span> <span class="n">probeName</span><span class="p">)</span>
+<span class="go">Feature selection results:</span>
+<span class="go">Shape of train features before feature selection:  (70526, 930)</span>
+<span class="go">Shape of train features after feature selection:  (70526, 20)</span>
+<span class="go">Execution time 00:00:00</span>
+
+
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">reducedTrainFeatures</span><span class="p">))</span>
+<span class="go">(70526, 20)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">reducedTestFeatures</span><span class="p">))</span>
+<span class="go">(34737, 20)</span>
+</pre></div>
+</div>
+<p>The function also has created a text file named <code class="docutils literal notranslate"><span class="pre">f_classif20Ranking.txt</span></code> in the <code class="docutils literal notranslate"><span class="pre">{dirPath}/results/TestExperiment</span></code> folder. It contents a LaTeX formated table with the ranking of the scores that have been selected:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>\begin{tabular}{|c|c|c|c|c|}
+\hline
+   \textbf{Position} &amp; \textbf{Channel} &amp; \textbf{Frame} &amp; \textbf{Feature} &amp; \textbf{Score} \\
+   \hline\hline
+   \textbf{ 1 } &amp; Ch1 &amp; -10 &amp; $\bar{r}$ &amp; 24.874 \\
+   \hline
+   \textbf{ 2 } &amp; Ch1 &amp; -11 &amp; $\bar{r}$ &amp; 24.829 \\
+   \hline
+   \textbf{ 3 } &amp; Ch1 &amp; -9 &amp; $\bar{r}$ &amp; 24.74 \\
+   \hline
+   \textbf{ 4 } &amp; Ch1 &amp; -12 &amp; $\bar{r}$ &amp; 24.696 \\
+   \hline
+   \textbf{ 5 } &amp; Ch1 &amp; -13 &amp; $\bar{r}$ &amp; 24.417 \\
+   \hline
+   \textbf{ 6 } &amp; Ch1 &amp; -8 &amp; $\bar{r}$ &amp; 24.403 \\
+   \hline
+   \textbf{ 7 } &amp; Ch1 &amp; -14 &amp; $\bar{r}$ &amp; 23.906 \\
+   \hline
+   \textbf{ 8 } &amp; Ch1 &amp; -7 &amp; $\bar{r}$ &amp; 23.653 \\
+   \hline
+   \textbf{ 9 } &amp; Ch1 &amp; -15 &amp; $\bar{r}$ &amp; 23.525 \\
+   \hline
+   \textbf{ 10 } &amp; Ch1 &amp; -6 &amp; $\bar{r}$ &amp; 22.759 \\
+   \hline
+   \textbf{ 11 } &amp; Ch1 &amp; -5 &amp; $\bar{r}$ &amp; 21.72 \\
+   \hline
+   \textbf{ 12 } &amp; Ch5 &amp; -8 &amp; $\bar{r}$ &amp; 21.641 \\
+   \hline
+   \textbf{ 13 } &amp; Ch5 &amp; -7 &amp; $\bar{r}$ &amp; 21.359 \\
+   \hline
+   \textbf{ 14 } &amp; Ch5 &amp; -9 &amp; $\bar{r}$ &amp; 21.178 \\
+   \hline
+   \textbf{ 15 } &amp; Ch1 &amp; -4 &amp; $\bar{r}$ &amp; 20.615 \\
+   \hline
+   \textbf{ 16 } &amp; Ch5 &amp; -10 &amp; $\bar{r}$ &amp; 20.445 \\
+   \hline
+   \textbf{ 17 } &amp; Ch4 &amp; -7 &amp; $\bar{r}$ &amp; 20.24 \\
+   \hline
+   \textbf{ 18 } &amp; Ch4 &amp; -8 &amp; $\bar{r}$ &amp; 20.228 \\
+   \hline
+   \textbf{ 19 } &amp; Ch5 &amp; -6 &amp; $\bar{r}$ &amp; 20.197 \\
+   \hline
+   \textbf{ 20 } &amp; Ch4 &amp; -9 &amp; $\bar{r}$ &amp; 19.961 \\
+   \hline
+\end{tabular}
+</pre></div>
+</div>
+<p>After pasting this code into a LaTeX document and compiling it, the resulting table will look like this:</p>
+<a class="reference internal image-reference" href="_images/featureSelectionExample.png"><img alt="_images/featureSelectionExample.png" src="_images/featureSelectionExample.png" style="width: 400px;" /></a>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dimensionalityReduction.featureLDAReduction">
+<span class="sig-prename descclassname"><span class="pre">dimensionalityReduction.</span></span><span class="sig-name descname"><span class="pre">featureLDAReduction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nComponents</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trainFeatures</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">testFeatures</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trainLabels</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dimensionalityReduction.featureLDAReduction" title="Permalink to this definition"></a></dt>
+<dd><p>This function reduces the number of dimensions to <code class="docutils literal notranslate"><span class="pre">nComponents</span></code> using the Linear Discriminant Analysis Reduction method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nComponents</strong> (<em>int</em>) – The number of components wanted as output.</p></li>
+<li><p><strong>trainFeatures</strong> (<em>numpy.ndarray</em>) – The features from the training subset.</p></li>
+<li><p><strong>testFeatures</strong> (<em>numpy.ndarray</em>) – The features from the testing subset.</p></li>
+<li><p><strong>trainLabels</strong> (<em>numpu.ndarray</em>) – The labels from the training subset.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example of use:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">datasetManipulation</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">dimensionalityReduction</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;batch.npy&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch</span> <span class="o">=</span> <span class="n">datasetManipulation</span><span class="o">.</span><span class="n">removeNaN</span><span class="p">(</span><span class="n">batch</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">labels</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">trainFeatures</span><span class="p">,</span> <span class="n">testFeatures</span><span class="p">,</span> <span class="n">trainLabels</span><span class="p">,</span> <span class="n">testLabels</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">features</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.33</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nComponents</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">trainFeatures</span><span class="p">))</span> <span class="c1"># Size of train features</span>
+<span class="go">(70526, 930)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">testFeatures</span><span class="p">))</span> <span class="c1"># Size of test features</span>
+<span class="go">(34737, 930)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">reducedTrainFeatures</span><span class="p">,</span> <span class="n">reducedTestFeatures</span> <span class="o">=</span> <span class="n">dimensionalityReduction</span><span class="o">.</span><span class="n">featureLDAReduction</span><span class="p">(</span><span class="n">nComponents</span><span class="p">,</span> <span class="n">trainFeatures</span><span class="p">,</span> <span class="n">testFeatures</span><span class="p">,</span> <span class="n">trainLabels</span><span class="p">)</span>
+<span class="go">LDA results:</span>
+<span class="go">Shape of train features before LDA transform:  (70526, 930)</span>
+<span class="go">Shape of train features after LDA transform:  (70526, 20)</span>
+<span class="go">Execution time 00:00:09</span>
+
+
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">reducedTrainFeatures</span><span class="p">))</span>
+<span class="go">(70526, 20)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">reducedTestFeatures</span><span class="p">))</span>
+<span class="go">(34737, 20)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
 </section>
 
 

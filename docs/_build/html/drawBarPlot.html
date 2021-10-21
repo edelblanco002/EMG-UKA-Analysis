@@ -37,7 +37,11 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <!-- Local TOC -->
               <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">drawBarPlot module</a></li>
+<li><a class="reference internal" href="#">drawBarPlot module</a><ul>
+<li><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li><a class="reference internal" href="#functions">Functions</a></li>
+</ul>
+</li>
 </ul>
 </div>
         </div>
@@ -66,6 +70,230 @@
              
   <section id="drawbarplot-module">
 <h1>drawBarPlot module<a class="headerlink" href="#drawbarplot-module" title="Permalink to this headline"></a></h1>
+<section id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline"></a></h2>
+<p>The libraries that are necessary to execute this module are the following ones:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+<span class="kn">import</span> <span class="nn">pdb</span>
+</pre></div>
+</div>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this headline"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="drawBarPlot.getColNames">
+<span class="sig-prename descclassname"><span class="pre">drawBarPlot.</span></span><span class="sig-name descname"><span class="pre">getColNames</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channelN</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stackingWidth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">featureNames</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#drawBarPlot.getColNames" title="Permalink to this definition"></a></dt>
+<dd><p>This function creates an array with the names that identifies each feature column. It also creates a first column named “Position”, that serves to</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>channelN</strong> (<em>int</em>) – The number of channels that are being analyzed.</p></li>
+<li><p><strong>stackingWidth</strong> (<em>int</em>) – Number of frames stacked in the stacking filter. It has to be kept in mind that this is the number stacked to each side of the central frame, so the total number of frames is <code class="docutils literal notranslate"><span class="pre">2*nFeatures</span> <span class="pre">+</span> <span class="pre">1</span></code>.</p></li>
+<li><p><strong>featureNames</strong> (<em>list</em>) – The names given to each kind of feature in every frame.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>list</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A list containting the names of the feature columns.</p>
+</dd>
+</dl>
+<dl>
+<dt>Example of use::</dt><dd><div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">drawBarPlot</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nChannel</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># Two channels</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stackingWidth</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># 2 frames stacked</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Pr&#39;</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">,</span><span class="s1">&#39;zr&#39;</span><span class="p">]</span> <span class="c1"># Three features</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">colNames</span> <span class="o">=</span> <span class="n">drawBarPlot</span><span class="o">.</span><span class="n">getColNames</span><span class="p">(</span><span class="n">nChannel</span><span class="p">,</span><span class="n">stackingWidth</span><span class="p">,</span><span class="n">features</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">colNames</span><span class="p">)</span>
+<span class="go">[&#39;Position&#39;, &#39;Ch1_M2_Pr&#39;, &#39;Ch1_M2_w&#39;, &#39;Ch1_M2_zr&#39;, &#39;Ch1_M1_Pr&#39;, &#39;Ch1_M1_w&#39;, &#39;Ch1_M1_zr&#39;, &#39;Ch1_0_Pr&#39;, &#39;Ch1_0_w&#39;, &#39;Ch1_0_zr&#39;, &#39;Ch1_P1_Pr&#39;, &#39;Ch1_P1_w&#39;, &#39;Ch1_P1_zr&#39;, &#39;Ch1_P2_Pr&#39;, &#39;Ch1_P2_w&#39;, &#39;Ch1_P2_zr&#39;, &#39;Ch2_M2_Pr&#39;, &#39;Ch2_M2_w&#39;, &#39;Ch2_M2_zr&#39;, &#39;Ch2_M1_Pr&#39;, &#39;Ch2_M1_w&#39;, &#39;Ch2_M1_zr&#39;,</span>
+<span class="go">&#39;Ch2_0_Pr&#39;, &#39;Ch2_0_w&#39;, &#39;Ch2_0_zr&#39;, &#39;Ch2_P1_Pr&#39;, &#39;Ch2_P1_w&#39;, &#39;Ch2_P1_zr&#39;, &#39;Ch2_P2_Pr&#39;, &#39;Ch2_P2_w&#39;, &#39;Ch2_P2_zr&#39;]</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="drawBarPlot.getIndexesDataFrame">
+<span class="sig-prename descclassname"><span class="pre">drawBarPlot.</span></span><span class="sig-name descname"><span class="pre">getIndexesDataFrame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">scores</span></em>, <em class="sig-param"><span class="pre">colNames</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">maxPosition</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#drawBarPlot.getIndexesDataFrame" title="Permalink to this definition"></a></dt>
+<dd><p>This function creates a DataFrame with the count of how many times has been ranked each feature in the <code class="docutils literal notranslate"><span class="pre">n</span></code> position. This function is intended to be used when the data is processed in multiple batches and the highest scored features are to be known. The <a class="reference internal" href="#drawBarPlot.printRanking" title="drawBarPlot.printRanking"><code class="xref py py-func docutils literal notranslate"><span class="pre">drawBarPlot.printRanking()</span></code></a> function has been created to work with one single batch so, when there are multiple batches, a bar plot is drawn instead. Getting the scores as a Dataframe is the first step for drawing the plot.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scores</strong> (<em>numpy.ndarray</em>) – The scores obtained with the <code class="xref py py-func docutils literal notranslate"><span class="pre">getFeatureScores.main()</span></code> function. It is a bidimensional array, where the first index corresponds to the batches and the second index corresponds to the feature scores.</p></li>
+<li><p><strong>colNames</strong> (<em>list</em>) – Name of each feature column. Is obtained with the <a class="reference internal" href="#drawBarPlot.getColNames" title="drawBarPlot.getColNames"><code class="xref py py-func docutils literal notranslate"><span class="pre">drawBarPlot.getColNames()</span></code></a> function.</p></li>
+<li><p><strong>maxPosition</strong> – It is the last position considered. If 3 is selected, only is going to be count how many times each feature has been ranked in the first, second or third position.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Type</dt>
+<dd class="field-even"><p>int, default=4</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.core.frame.DataFrame</span></code></p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A DataFrame containing how many times each feature has been ranked in the <code class="docutils literal notranslate"><span class="pre">n</span></code> position.</p>
+</dd>
+</dl>
+<p>Example of use:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">datasetManipulation</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">drawBarPlot</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.model_selection</span> <span class="kn">import</span> <span class="n">train_test_split</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;batch.npy&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch</span> <span class="o">=</span> <span class="n">datasetManipulation</span><span class="o">.</span><span class="n">removeNaN</span><span class="p">(</span><span class="n">batch</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">labels</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch1Features</span><span class="p">,</span> <span class="n">batch2Features</span><span class="p">,</span> <span class="n">batch1Labels</span><span class="p">,</span> <span class="n">batch2Labels</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">features</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nBatches</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># Two batches: batch 1 and batch 2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rowSize</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">features</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># Number of features</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">scores</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nBatches</span><span class="p">,</span><span class="n">rowSize</span><span class="p">))</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.feature_selection</span> <span class="kn">import</span> <span class="n">SelectKBest</span><span class="p">,</span> <span class="n">f_classif</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">selector</span> <span class="o">=</span> <span class="n">SelectKBest</span><span class="p">(</span><span class="n">f_classif</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">selector</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">batch1Features</span><span class="p">,</span><span class="n">batch1Labels</span><span class="p">)</span>
+<span class="go">SelectKBest()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">scores</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">selector</span><span class="o">.</span><span class="n">scores_</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">selector</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">batch2Features</span><span class="p">,</span><span class="n">batch2Labels</span><span class="p">)</span>
+<span class="go">SelectKBest()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">scores</span><span class="p">[</span><span class="mi">1</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">selector</span><span class="o">.</span><span class="n">scores_</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nChannels</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stackingWidth</span> <span class="o">=</span> <span class="mi">15</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">featureNames</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;w&#39;</span><span class="p">,</span><span class="s1">&#39;Pw&#39;</span><span class="p">,</span><span class="s1">&#39;Pr&#39;</span><span class="p">,</span><span class="s1">&#39;z&#39;</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">]</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">colNames</span> <span class="o">=</span> <span class="n">drawBarPlot</span><span class="o">.</span><span class="n">getColNames</span><span class="p">(</span><span class="n">nChannels</span><span class="p">,</span><span class="n">stackingWidth</span><span class="p">,</span><span class="n">featureNames</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">drawBarPlot</span><span class="o">.</span><span class="n">getIndexesDataFrame</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">colNames</span><span class="p">,</span> <span class="n">maxPosition</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+<span class="go">   Position  Ch1_M15_w  Ch1_M15_Pw  Ch1_M15_Pr  Ch1_M15_z  Ch1_M15_r  ...  Ch6_P14_r  Ch6_P15_w  Ch6_P15_Pw  Ch6_P15_Pr  Ch6_P15_z</span>
+<span class="go">0         1          0           2           0          1          0  ...          0          0           0           0          0</span>
+
+<span class="go">1         2          2           0           0          0          0  ...          0          0           0           0          0</span>
+
+<span class="go">2         3          1           0           4          0          0  ...          0          0           0           0          0</span>
+
+<span class="go">3         4          3           0           0          0          0  ...          0          0           0           0          0</span>
+
+<span class="go">4         5          0           0           2          0          0  ...          0          0           0           0          0</span>
+
+<span class="go">5         6          0           0           0          0          0  ...          0          0           0           0          0</span>
+
+
+<span class="go">[6 rows x 931 columns]</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In the example, the printed Dataframe has been manipulated in order to make clearer what the aim of this function is. When there are a great amount of features (in the example 930 features are being used) it is not strange that only <code class="docutils literal notranslate"><span class="pre">0</span></code> values appear in the features that appear into the print. That does not mean that function is not working. It is just that the important features are not listed in the beginning nor the ending. They are in an intermediate position and they have not been printed. It is easy to check that the rows content non-zero values by summing all values in the rows with <code class="docutils literal notranslate"><span class="pre">df.sum(axis=1)</span></code>.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="drawBarPlot.printRanking">
+<span class="sig-prename descclassname"><span class="pre">drawBarPlot.</span></span><span class="sig-name descname"><span class="pre">printRanking</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scores</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colNames</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxPosition</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scoresName</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latexFormat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#drawBarPlot.printRanking" title="Permalink to this definition"></a></dt>
+<dd><p>This function returns a ranking with the highest scores as a string that can be displayed or saved to a file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scores</strong> (<em>numpy.ndarray</em>) – The scores calculated by the selection algorithm.</p></li>
+<li><p><strong>colNames</strong> (<em>list</em>) – Name of each feature column. Is obtained with the <a class="reference internal" href="#drawBarPlot.getColNames" title="drawBarPlot.getColNames"><code class="xref py py-func docutils literal notranslate"><span class="pre">drawBarPlot.getColNames()</span></code></a> function.</p></li>
+<li><p><strong>maxPosition</strong> (<em>int</em>) – The last position considered in the ranking.</p></li>
+<li><p><strong>scoresName</strong> (<em>str</em>) – Name of the used score function.</p></li>
+<li><p><strong>latexFormat</strong> (<em>boolean</em>) – If it is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, the format of the output string will be a table formated to be inserted into a LaTeX document. If it is set to <code class="docutils literal notranslate"><span class="pre">False</span></code>, the output will be plain text formatted as a table.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The function returns a string formatted as a table, in plain text or in LaTeX format.</p>
+</dd>
+</dl>
+<p>Example of use:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">datasetManipulation</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">drawBarPlot</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;batch.npy&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch</span> <span class="o">=</span> <span class="n">datasetManipulation</span><span class="o">.</span><span class="n">removeNaN</span><span class="p">(</span><span class="n">batch</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">features</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">labels</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">sklearn.feature_selection</span> <span class="kn">import</span> <span class="n">SelectKBest</span><span class="p">,</span> <span class="n">f_classif</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">selector</span> <span class="o">=</span> <span class="n">SelectKBest</span><span class="p">(</span><span class="n">f_classif</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">selector</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">features</span><span class="p">,</span><span class="n">labels</span><span class="p">)</span>
+<span class="go">SelectKBest()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">scores</span> <span class="o">=</span> <span class="n">selector</span><span class="o">.</span><span class="n">scores_</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nChannels</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stackingWidth</span> <span class="o">=</span> <span class="mi">15</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">featureNames</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;w&#39;</span><span class="p">,</span><span class="s1">&#39;Pw&#39;</span><span class="p">,</span><span class="s1">&#39;Pr&#39;</span><span class="p">,</span><span class="s1">&#39;z&#39;</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">]</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">colNames</span> <span class="o">=</span> <span class="n">drawBarPlot</span><span class="o">.</span><span class="n">getColNames</span><span class="p">(</span><span class="n">nChannels</span><span class="p">,</span><span class="n">stackingWidth</span><span class="p">,</span><span class="n">featureNames</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">maxPosition</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">scoresName</span> <span class="o">=</span> <span class="s1">&#39;f_classif&#39;</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ranking</span> <span class="o">=</span> <span class="n">drawBarPlot</span><span class="o">.</span><span class="n">printRanking</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">colNames</span><span class="p">,</span> <span class="n">maxPosition</span><span class="p">,</span> <span class="n">scoresName</span><span class="p">,</span> <span class="n">latexFormat</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">ranking</span><span class="p">)</span>
+<span class="go">Score ranking for f_classif</span>
+<span class="go">Position Feature         Score</span>
+<span class="go">1        Ch1_M10_r       36.825745</span>
+<span class="go">2        Ch1_M9_r        36.78888</span>
+<span class="go">3        Ch1_M11_r       36.720818</span>
+<span class="go">4        Ch1_M12_r       36.352417</span>
+<span class="go">5        Ch1_M8_r        36.349323</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ranking</span> <span class="o">=</span> <span class="n">drawBarPlot</span><span class="o">.</span><span class="n">printRanking</span><span class="p">(</span><span class="n">dirPath</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">colNames</span><span class="p">,</span> <span class="n">maxPosition</span><span class="p">,</span> <span class="n">scoresName</span><span class="p">,</span> <span class="n">latexFormat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">ranking</span><span class="p">)</span>
+<span class="go">\begin{tabular}{|c|c|c|c|c|}</span>
+<span class="go">\hline</span>
+<span class="go">      \textbf{Position} &amp; \textbf{Channel} &amp; \textbf{Frame} &amp; \textbf{Feature} &amp; \textbf{Score} \\</span>
+<span class="go">      \hline\hline</span>
+<span class="go">      \textbf{ 1 } &amp; Ch1 &amp; -10 &amp; $\bar{r}$ &amp; 36.826 \\</span>
+<span class="go">      \hline</span>
+<span class="go">      \textbf{ 2 } &amp; Ch1 &amp; -9 &amp; $\bar{r}$ &amp; 36.789 \\</span>
+<span class="go">      \hline</span>
+<span class="go">      \textbf{ 3 } &amp; Ch1 &amp; -11 &amp; $\bar{r}$ &amp; 36.721 \\</span>
+<span class="go">      \hline</span>
+<span class="go">      \textbf{ 4 } &amp; Ch1 &amp; -12 &amp; $\bar{r}$ &amp; 36.352 \\</span>
+<span class="go">      \hline</span>
+<span class="go">      \textbf{ 5 } &amp; Ch1 &amp; -8 &amp; $\bar{r}$ &amp; 36.349 \\</span>
+<span class="go">      \hline</span>
+<span class="go">\end{tabular}</span>
+</pre></div>
+</div>
+<p>After pasting this code into a LaTeX document and compiling it, the resulting table should look like this:</p>
+<a class="reference internal image-reference" href="_images/printRankingExample.png"><img alt="_images/printRankingExample.png" src="_images/printRankingExample.png" style="width: 600px;" /></a>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="drawBarPlot.main">
+<span class="sig-prename descclassname"><span class="pre">drawBarPlot.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dirPath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uttType</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">analyzedLabels</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#drawBarPlot.main" title="Permalink to this definition"></a></dt>
+<dd><p>This is the main function of the module. It reads the scores calculated and saved by the <code class="xref py py-func docutils literal notranslate"><span class="pre">getFeatureScores.main()</span></code> function. If the data is analyzed by using a single batch, the function will print a ranking of the best features. If the data has been divided in multiple batches, the function will draw a bar plot that shows how many times wach feature has been ranked in the considered positions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dirPath</strong> (<em>str</em>) – Path to the base directory of the analyzed corpus.</p></li>
+<li><p><strong>uttType</strong> (<em>str</em>) – The type of utterances that are being analyzed: <code class="docutils literal notranslate"><span class="pre">audible</span></code>, <code class="docutils literal notranslate"><span class="pre">whispered</span></code> or <code class="docutils literal notranslate"><span class="pre">silent</span></code>.</p></li>
+<li><p><strong>analyzedLabels</strong> (<em>str</em>) – The type of labels that are being analyzed: <code class="docutils literal notranslate"><span class="pre">Simple</span></code>, <code class="docutils literal notranslate"><span class="pre">Transitions</span></code> or <code class="docutils literal notranslate"><span class="pre">All</span></code></p></li>
+</ul>
+</dd>
+</dl>
+<p>This is an example of the image created by the function:</p>
+<a class="reference internal image-reference" href="_images/drawBarPlotExample.png"><img alt="_images/drawBarPlotExample.png" src="_images/drawBarPlotExample.png" style="width: 600px;" /></a>
+</dd></dl>
+
+</section>
 </section>
 
 

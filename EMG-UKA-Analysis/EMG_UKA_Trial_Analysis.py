@@ -20,7 +20,7 @@ analyzedLabels = 'Simple' # 'All', 'Simple', 'Transitions' or 'PilotStudy'
 #gatherDataIntoTable.main(dirpath,uttType,'train')
 #gatherDataIntoTable.main(dirpath,uttType,'test')
 
-experimentName = 'ExperimentBorrar'
+experimentName = 'ExperimentBagging6'
 
 
 # Available reduction methods: 'SelectKBest', 'LDAReduction'
@@ -38,12 +38,13 @@ experimentName = 'ExperimentBorrar'
 
 probes = []
 
-for n_estimators in [10, 25, 50 ,75, 100]:
-    for min_samples_leaf in [10, 25, 50, 75, 100]:
+for n_estimators in [90, 100, 110, 120, 130, 140, 150]:
+    for min_samples_leaf in [30, 40, 50, 60, 70]:
         probes.append(
             Probe(
-                reductionMethod = 'LDAReduction',
-                n_features = 38,
+                reductionMethod = 'SelectKBest',
+                scoreFunction = 'f_classif',
+                n_features = 100,
                 classificationMethod = 'bagging',
                 n_estimators = n_estimators,
                 min_samples_leaf = min_samples_leaf
