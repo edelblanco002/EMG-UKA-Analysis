@@ -43,7 +43,12 @@ def testGMMmodels(models, testFeatures, testLabels, uniqueLabels):
         probs = np.zeros(np.shape(uniqueLabels)) # The array to save the likelihood of the sample with each model
         # Calculate the probability for each model. There should be as many models as labels in uniqueLabels
         for l in range(len(uniqueLabels)):
-            probs[l] = models[uniqueLabels[l]].score([testFeatures[n]])
+            # It could be possible that a label of unique labels were not present in the training dataset, but it's present in the test dataset, so it appears in uniqueLabels
+            # If that label were not present in the training dataset, there is no model trained for that label
+            if uniqueLabels[l] in models.keys(): 
+                probs[l] = models[uniqueLabels[l]].score([testFeatures[n]])
+            else:
+                probs[l] = 0
     
         # Find the label whose model has obtained the maximum likelihood
         predictedLabel = uniqueLabels[probs.argmax()]
@@ -79,26 +84,30 @@ def trainGMMmodels(trainFeatures, trainLabels, uniqueLabels):
     
     label_models = {}
     
-    for label in uniqueLabels:
-        # Select only the features labeled with 'label'
-        nz = trainLabels == label
-        labelFeatures = trainFeatures[nz == True, :]
+    for label in uniqueLabels:        
+        # It could be possible that one of the unique labels is not present in the training dataset, because it appears only in the test dataset.
+        # A GMM only can be fitted for a label when that label is present into the training subset.
+        if np.count_nonzero(trainLabels == label) > 1: # The minimum number of examples that a label must have to fit a model is 2
+            # Select only the features labeled with 'label'
+            nz = trainLabels == label
+
+            labelFeatures = trainFeatures[nz == True, :]
     
-        # The first model is trained with just 1 component
-        modelA = GMM(1,covariance_type='full',random_state=0).fit(labelFeatures)
-    
-        lastBic = modelA.bic(labelFeatures)
-    
-        # Many number of components are tryied until finding the minimum or reaching 'max_components'
-        for n_components in range(2,max_components):
-            modelB = GMM(n_components,covariance_type='full',random_state=0).fit(labelFeatures)
-            actualBic = modelB.bic(labelFeatures)
-            if actualBic > lastBic: # If the new bic is greater than previous, that means that previous model has the minimum bic
-                break
-            else: # Set actual model as previous model and keep with the algorithm
-                lastBic = actualBic
-                modelA = modelB
-    
-        label_models[label] = modelA # The algorithm stops when modelB.bic > modelA.bic, so modelA is better then modelB
+            # The first model is trained with just 1 component
+            modelA = GMM(1,covariance_type='full',random_state=0).fit(labelFeatures)
+        
+            lastBic = modelA.bic(labelFeatures)
+        
+            # Many number of components are tryied until finding the minimum or reaching 'max_components'
+            for n_components in range(2,max_components):
+                modelB = GMM(n_components,covariance_type='full',random_state=0).fit(labelFeatures)
+                actualBic = modelB.bic(labelFeatures)
+                if actualBic > lastBic: # If the new bic is greater than previous, that means that previous model has the minimum bic
+                    break
+                else: # Set actual model as previous model and keep with the algorithm
+                    lastBic = actualBic
+                    modelA = modelB
+        
+            label_models[label] = modelA # The algorithm stops when modelB.bic > modelA.bic, so modelA is better then modelB
 
     return label_models

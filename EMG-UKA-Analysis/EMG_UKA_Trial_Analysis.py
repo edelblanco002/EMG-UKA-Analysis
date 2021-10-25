@@ -8,8 +8,8 @@ from featureSelectionProbe import Probe
 import telegramNotification
 import traceback
 
-#dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus'
-#scriptpath = 'C:/Users/Eder/source/repos/EMG-UKA-Trial-Analysis'
+#dirpath = 'C:/Users/edelblanco002/Documents/EMG-UKA-Trial-Corpus'
+#scriptpath = 'C:/Users/edelblanco002/Documents/Code/EMG-UKA-Analysis/EMG-UKA-Analysis'
 
 dirpath = '/mnt/ldisk/eder/EMG-UKA-Trial-Corpus'
 scriptpath = '/home/aholab/eder/scripts/EMG-UKA-Analysis/EMG-UKA-Analysis'
@@ -20,7 +20,7 @@ analyzedLabels = 'Simple' # 'All', 'Simple', 'Transitions' or 'PilotStudy'
 #gatherDataIntoTable.main(dirpath,uttType,'train')
 #gatherDataIntoTable.main(dirpath,uttType,'test')
 
-experimentName = 'ExperimentBagging6'
+experimentName = 'Speaker-Session-Dependent-Experiments2'
 
 
 # Available reduction methods: 'SelectKBest', 'LDAReduction'
@@ -36,23 +36,39 @@ experimentName = 'ExperimentBagging6'
        )
 ]"""
 
+speakersAndSessions = [
+    ('002','001'),
+    ('002','003'),
+    ('002','101'),
+    ('004','001'),
+    ('006','001'),
+    ('008','001'),
+    ('008','002'),
+    ('008','003'),
+    ('008','004'),
+    ('008','005'),
+    ('008','006'),
+    ('008','007'),
+    ('008','008')
+]
+
 probes = []
 
-for n_estimators in [90, 100, 110, 120, 130, 140, 150]:
-    for min_samples_leaf in [30, 40, 50, 60, 70]:
-        probes.append(
-            Probe(
-                reductionMethod = 'SelectKBest',
-                scoreFunction = 'f_classif',
-                n_features = 100,
-                classificationMethod = 'bagging',
-                n_estimators = n_estimators,
-                min_samples_leaf = min_samples_leaf
-            )
+for speaker, session in speakersAndSessions:
+    probes.append(
+        Probe(
+            uttType='audible',
+            analyzedLabels='simple',
+            speaker=speaker,
+            session=session,
+            reductionMethod = 'LDAReduction',
+            n_features = 32,
+            classificationMethod = 'GMMmodels'
         )
+    )
 
 try:
-    featureSelectionProbe.main(dirpath,scriptpath,uttType,analyzedLabels,experimentName,probes)
+    featureSelectionProbe.main(dirpath,scriptpath,experimentName,probes)
     classifierEvaluation.main(dirpath,scriptpath,experimentName,probes)
 
 except:

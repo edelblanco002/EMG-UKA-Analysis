@@ -75,6 +75,14 @@ def getFilesList(dirPath,uttType,subset='both',speaker='all',session='all'):
 
     return utteranceFiles
 
+def removeTables(dirPath):
+    # This function serves to remove every table at the end of execution
+    dirFiles = os.listdir(dirPath)
+    filteredFiles = [file for file in dirFiles if file.endswith(".h5")]
+    for file in filteredFiles:
+        filePath = os.path.join(dirPath,file)
+        os.remove(filePath)
+
 
 def main(dirPath,uttType,subset='both',speaker='all',session='all'):
     
@@ -84,15 +92,15 @@ def main(dirPath,uttType,subset='both',speaker='all',session='all'):
 
     rowSize = 6*5*(stackingWidth*2+1) + 1
     
-    files = getFilesList(dirPath,uttType,subset)
+    files = getFilesList(dirPath,uttType,subset,speaker=speaker,session=session)
 
     filename = ""
 
     if speaker != 'all':
         filename += f"{speaker}_"
 
-    if session != 'all':
-        filename += f"{session}_"
+        if session != 'all':
+            filename += f"{session}_"
 
     filename += f"{uttType}"
 

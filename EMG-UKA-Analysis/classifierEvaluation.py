@@ -1,8 +1,10 @@
+import featureSelectionProbe
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pickle
 import seaborn as sns
+from sklearn import feature_selection
 
 class LabelOutcome:
     # The object can be created with its attributes or add them later
@@ -54,11 +56,11 @@ class LabelOutcome:
         else:
             return self.__TN/(self.__TN + self.__FP)
 
-def loadProbeResults(dirpath,scriptpath,experimentName,probe,subset):
+def loadProbeResults(dirpath,scriptpath,experimentName,probe: featureSelectionProbe.Probe,subset):
     # This function loads the confussion matrix, the phone dict and the list of unique labels
 
     confusionMatrix = np.load(f"{dirpath}/results/{experimentName}/{probe.name}_{subset}ConfusionMatrix.npy").astype(int) # [True Labels x Predicted labels]
-    uniqueLabels = np.load(f"{dirpath}/results/{experimentName}/uniqueLabels.npy").astype(int)
+    uniqueLabels = np.load(f"{dirpath}/results/{experimentName}/{probe.name}_uniqueLabels.npy").astype(int)
     
     with open(f"{dirpath}/results/{experimentName}/phoneDict.pkl","rb") as file:
         phoneDict = pickle.load(file)
@@ -70,7 +72,7 @@ def loadProbeResults(dirpath,scriptpath,experimentName,probe,subset):
         uniquePhones.append(phoneDict[elem])
     return confusionMatrix, phoneDict, uniqueLabels, uniquePhones
 
-def drawConfusionMatrix(dirpath,scriptpath,experimentName,probe,subset):
+def drawConfusionMatrix(dirpath,scriptpath,experimentName,probe: featureSelectionProbe.Probe,subset):
     # This function draws a normalized confusion matrix and export the resulting figure as a image
 
     confusionMatrix, phoneDict, uniqueLabels, uniquePhones = loadProbeResults(dirpath,scriptpath,experimentName,probe,subset)
@@ -128,6 +130,7 @@ def main(dirpath,scriptpath,experimentName,probes):
     subsets = ["Train","Test"]
 
     # For every probe:
+    probe: featureSelectionProbe.Probe
     for probe in probes:
         reductionMethod = probe.reductionMethod+probe.scoreFunction+str(probe.n_features)
         classificationMethod = probe.classificationMethod
