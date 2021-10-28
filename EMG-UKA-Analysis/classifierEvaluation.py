@@ -86,7 +86,7 @@ def drawConfusionMatrix(dirpath,scriptpath,experimentName,probe: featureSelectio
     
     ax.set_xlabel("Predicted label")
     ax.set_ylabel("True label")
-  
+
     plt.savefig(f"{dirpath}/results/{experimentName}/{probe.name}_{subset}ConfusionMatrix.png")
 
 def getOutcomes(dirpath,scriptpath,experimentName,probe,subset):

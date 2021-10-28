@@ -11,7 +11,7 @@ import traceback
 #dirpath = 'C:/Users/edelblanco002/Documents/EMG-UKA-Trial-Corpus'
 #scriptpath = 'C:/Users/edelblanco002/Documents/Code/EMG-UKA-Analysis/EMG-UKA-Analysis'
 
-dirpath = '/mnt/ldisk/eder/EMG-UKA-Trial-Corpus'
+dirpath = '/mnt/ldisk/eder/ReSSInt/Pilot2/Session2'
 scriptpath = '/home/aholab/eder/scripts/EMG-UKA-Analysis/EMG-UKA-Analysis'
 
 uttType = 'audible' # 'audible', 'whispered' or 'silent'
@@ -20,7 +20,7 @@ analyzedLabels = 'Simple' # 'All', 'Simple', 'Transitions' or 'PilotStudy'
 #gatherDataIntoTable.main(dirpath,uttType,'train')
 #gatherDataIntoTable.main(dirpath,uttType,'test')
 
-experimentName = 'Speaker-Session-Dependent-Experiments2'
+experimentName = 'Speaker-Session-Dependent-Experiments4'
 
 
 # Available reduction methods: 'SelectKBest', 'LDAReduction'
@@ -36,7 +36,7 @@ experimentName = 'Speaker-Session-Dependent-Experiments2'
        )
 ]"""
 
-speakersAndSessions = [
+'''speakersAndSessions = [
     ('002','001'),
     ('002','003'),
     ('002','101'),
@@ -62,10 +62,14 @@ for speaker, session in speakersAndSessions:
             speaker=speaker,
             session=session,
             reductionMethod = 'LDAReduction',
-            n_features = 32,
-            classificationMethod = 'GMMmodels'
+            n_features = 38,
+            classificationMethod = 'bagging',
+            n_estimators= 110,
+            min_samples_leaf=40
         )
-    )
+    )'''
+
+probes = [  Probe(    reductionMethod = 'LDAReduction',    n_features = 38,    classificationMethod = 'bagging',    n_estimators = 10,    min_samples_leaf = 10    )]
 
 try:
     featureSelectionProbe.main(dirpath,scriptpath,experimentName,probes)
