@@ -1,5 +1,7 @@
 from bar import printProgressBar
 import datasetManipulation
+import gatherDataIntoTable
+from globalVars import DIR_PATH, SCRIPT_PATH, N_BATCHES, ROW_SIZE
 import math
 import numpy as np
 import pandas as pd
@@ -20,40 +22,46 @@ def getFeatureScores(batch):
 
     return clfFClass.scores_, clfMutual.scores_
 
-def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = 'C:/Users/Eder/source/repos/EMG-UKA-Trial-Analysis',uttType='audible',analyzedLabels='All'):
+def main(uttType='audible',analyzedLabels='all',speaker='all',session='all'):
         
-    phoneDict = datasetManipulation.getPhoneDict(scriptpath)
+    phoneDict = datasetManipulation.getPhoneDict()
     
-    tableFile = tables.open_file(f"{dirpath}/{uttType}Table.h5",mode='r')
+    gatherDataIntoTable.main(uttType=uttType,subset='both',speaker='all',session='all')
+
+    # If the probes are done with a specific speaker and session, build the name of the file where it is saved.
+    basename = ""
+
+    if speaker != 'all':
+        basename += f"{speaker}_"
+
+        if session != 'all':
+            basename += f"{session}_"
+
+    basename += f"{uttType}"
+
+    tableFile = tables.open_file(f"{DIR_PATH}/{basename}Table.h5",mode='r')
     table = tableFile.root.data
     
     nExamples = np.shape(table)[0]
-    nBatches = 1
     
-    nChannels = 6
-    nFeatures = 5
-    stackingWidth = 15
-
-    rowSize = nChannels*nFeatures*(stackingWidth*2 + 1)
-
-    scoresFClass = np.zeros((nBatches,rowSize))
-    scoresMutual = np.zeros((nBatches,rowSize))
+    scoresFClass = np.zeros((N_BATCHES,ROW_SIZE - 1))
+    scoresMutual = np.zeros((N_BATCHES,ROW_SIZE - 1))
     
     totalRemovedNan = 0
     totalRemovedLabels = 0
 
     mainT0 = time.time()
-    print(f"Calculating scores using {nBatches} batches:")
-    for n in range(nBatches):
-        printProgressBar(n, nBatches, prefix = 'Progress:', suffix = f'{n}/{nBatches} ({n*100/nBatches})', length = 50)
+    print(f"Calculating scores using {N_BATCHES} batches:")
+    for n in range(N_BATCHES):
+        printProgressBar(n, N_BATCHES, prefix = 'Progress:', suffix = f'{n}/{N_BATCHES} ({n*100/N_BATCHES})', length = 50)
     
         #t0 = time.time()
 
-        if nBatches == 1:
+        if N_BATCHES == 1:
             batch = table[:]
         else:
             # The batch is build taking evenly spaced examples
-            batch = table[n::nBatches]
+            batch = table[n::N_BATCHES]
         
         #print("\nGet batch time: ",time.time()-t0," s")
     
@@ -62,9 +70,9 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
 
         removedLabels = 0
 
-        if analyzedLabels == 'Simple':
+        if analyzedLabels == 'simple':
             batch, removedLabels = datasetManipulation.removeTransitionPhonemes(batch,phoneDict)
-        elif analyzedLabels == 'Transitions':
+        elif analyzedLabels == 'transitions':
             batch, removedLabels = datasetManipulation.removeSimplePhonemes(batch,phoneDict)
 
         totalRemovedLabels += removedLabels
@@ -76,8 +84,8 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
     
         scoresFClass[n,:],scoresMutual[n,:] = getFeatureScores(batch)
     
-    np.save(f"{dirpath}/scoresFClass{uttType}{analyzedLabels}.npy",scoresFClass)
-    np.save(f"{dirpath}/scoresMutual{uttType}{analyzedLabels}.npy",scoresMutual)
+    np.save(f"{DIR_PATH}/scoresFClass{uttType}{analyzedLabels}.npy",scoresFClass)
+    np.save(f"{DIR_PATH}/scoresMutual{uttType}{analyzedLabels}.npy",scoresMutual)
     
     executionTime=time.time()-mainT0
 
@@ -86,6 +94,7 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
     executionTimeHours = math.floor(executionTime/3600)
     
     tableFile.close()
+    gatherDataIntoTable.removeTables()
 
     telegramNotification.sendTelegram(f"Execution finished.\n\nOriginal number of examples: {nExamples}\nRemoved NaN: {totalRemovedNan}\nRemoved transition labels and silences: {totalRemovedLabels}\nUtterance type: {uttType}\nAnalyzed labels: {analyzedLabels}\nExecution time: {executionTimeHours} h {executionTimeMin} m {executionTimeSec} s")
 

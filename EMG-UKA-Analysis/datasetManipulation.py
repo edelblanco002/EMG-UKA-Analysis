@@ -1,3 +1,5 @@
+from globalVars import SCRIPT_PATH
+import json
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
@@ -5,13 +7,13 @@ from sklearn.svm import OneClassSVM
 import seaborn as sns
 import time
 
-def getPhoneDict(scriptpath):
+def getPhoneDict():
     # This function loads a dictionary that links each label number with its corresponding phoneme.
 
     phoneDict = {}
     
     # Reads the map that contains the relation between each phoneme and its number
-    file = open(f"{scriptpath}/phoneMap",'r')
+    file = open(f"{SCRIPT_PATH}/phoneMap",'r')
     lines = file.readlines()
     file.close()
     

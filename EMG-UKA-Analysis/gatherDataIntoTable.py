@@ -1,25 +1,28 @@
 from bar import printProgressBar
+from globalVars import DIR_PATH, N_CHANNELS, ROW_SIZE
 import numpy as np
 import os
 import tables
 
-def buildTable(dirPath,utteranceFiles,rowSize,tableFileName='table'):
+def buildTable(utteranceFiles,tableFileName='table',uttType='Audible'):
     # This function reads the data from all files in the utteranceFiles list
     # and writes all together into a HDF5 file
 
-    tableFile = tables.open_file(f"{dirPath}/{tableFileName}.h5",mode='w', title="Features from audible utterances")
+    tableFile = tables.open_file(f"{DIR_PATH}/{tableFileName}.h5",mode='w', title="Features from audible utterances")
     atom = tables.Float32Atom()
     
     # Create the array_c to write into the HDF5 file. Each example is appended as a new row
-    array_c = tableFile.create_earray(tableFile.root, 'data', atom, (0, rowSize))
+    array_c = tableFile.create_earray(tableFile.root, 'data', atom, (0, ROW_SIZE))
     
     i = 0
     printProgressBar(i, len(utteranceFiles), prefix = 'Progress:', suffix = 'Complete', length = 50)
     for utteranceFile in utteranceFiles:
         utteranceFile = utteranceFile.replace('emg_','')
         speaker, session, utt = utteranceFile.split('-')
-        
-        file = open(f"{dirPath}/features/{speaker}/{session}/e07_{speaker}_{session}_{utt}.npy",'rb')
+
+        # file = open(f"{DIR_PATH}/features/{speaker}/{session}/e{str(N_CHANNELS+1).zfill(2)}_{speaker}_{session}_{utt}.npy",'rb')
+        round = session[-1]
+        file = open(f"{DIR_PATH}/features/{speaker}/{session}/emg_{str(N_CHANNELS+1).zfill(2)}ch_{speaker}_{uttType}{round}_{utt}.npy",'rb')
         auxMat = np.load(file)
         file.close()
     
@@ -35,7 +38,7 @@ def buildTable(dirPath,utteranceFiles,rowSize,tableFileName='table'):
     return
 
 
-def getFilesList(dirPath,uttType,subset='both',speaker='all',session='all'):
+def getFilesList(uttType,subset='both',speaker='all',session='all'):
     # This function returns the list of all utterances of the given uttType (audible, whispered or silent) and the given subset (train, test or both). Also a specific speaker and session can be selected.
 
     utteranceFiles = []
@@ -48,7 +51,7 @@ def getFilesList(dirPath,uttType,subset='both',speaker='all',session='all'):
         utteranceListFiles = [f"test.{uttType}"]
 
     for listFile in utteranceListFiles:
-        file = open(f"{dirPath}/Subsets/{listFile}",'r')
+        file = open(f"{DIR_PATH}/Subsets/{listFile}",'r')
         lines = file.readlines()
         file.close()
 
@@ -75,24 +78,22 @@ def getFilesList(dirPath,uttType,subset='both',speaker='all',session='all'):
 
     return utteranceFiles
 
-def removeTables(dirPath):
+def removeTables():
     # This function serves to remove every table at the end of execution
-    dirFiles = os.listdir(dirPath)
+    dirFiles = os.listdir(DIR_PATH)
     filteredFiles = [file for file in dirFiles if file.endswith(".h5")]
     for file in filteredFiles:
-        filePath = os.path.join(dirPath,file)
+        filePath = os.path.join(DIR_PATH,file)
         os.remove(filePath)
 
 
-def main(dirPath,uttType,subset='both',speaker='all',session='all'):
+def main(uttType,subset='both',speaker='all',session='all'):
     
     nChannels = 6
     nFeatures = 5
     stackingWidth = 15
-
-    rowSize = 6*5*(stackingWidth*2+1) + 1
     
-    files = getFilesList(dirPath,uttType,subset,speaker=speaker,session=session)
+    files = getFilesList(uttType,subset,speaker=speaker,session=session)
 
     filename = ""
 
@@ -109,7 +110,7 @@ def main(dirPath,uttType,subset='both',speaker='all',session='all'):
 
     filename += 'Table'
 
-    buildTable(dirPath,files,rowSize,filename)
+    buildTable(files,filename)
 
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@ from classifiers import *
 import datasetManipulation
 from dimensionalityReduction import *
 import gatherDataIntoTable
+from globalVars import DIR_PATH, N_CHANNELS, N_FEATURES, STACKING_WIDTH
 import numpy as np
 import os
 import pandas as pd
@@ -96,7 +97,7 @@ class Probe:
             self.n_estimators = n_estimators
             self.min_samples_leaf = min_samples_leaf
 
-def probes2csv(probes,dirpath,probeName):
+def probes2csv(probes,probeName):
     df = pd.DataFrame(columns=['Name', 'Speaker', 'Session', 'Utterance type', 'Analyzed labels', 'Classification method', 'Reduction method', 'Score function', 'n_estimators', 'min_samples_leaf', 'n_features','Elapsed time in training','Elapsed time in testing with train subset','Elapsed time in testing with test subset','Accuracy with train subset','Accuracy with test subset'])
 
     probe: Probe
@@ -117,10 +118,10 @@ def probes2csv(probes,dirpath,probeName):
             row['Score function'] = probe.scoreFunction
         df = df.append(pd.Series(row),ignore_index=True)
 
-    df.to_csv(f"{dirpath}/results/{probeName}/probeList.csv",index=False)
+    df.to_csv(f"{DIR_PATH}/results/{probeName}/probeList.csv",index=False)
 
-def saveExecutionResults(name,trainingTime,testingTrainTime,testingTestTime,trainScore,testScore,dirpath,probeName):
-    df = pd.read_csv(f"{dirpath}/results/{probeName}/probeList.csv")
+def saveExecutionResults(name,trainingTime,testingTrainTime,testingTestTime,trainScore,testScore,probeName):
+    df = pd.read_csv(f"{DIR_PATH}/results/{probeName}/probeList.csv")
 
     # Time is stored in seconds, so it can be easily manipulated in the future
     df.loc[df['Name'] == name,['Elapsed time in training']] = trainingTime
@@ -131,9 +132,9 @@ def saveExecutionResults(name,trainingTime,testingTrainTime,testingTestTime,trai
     df.loc[df['Name'] == name,['Accuracy with train subset']] = trainScore
     df.loc[df['Name'] == name,['Accuracy with test subset']] = testScore
 
-    df.to_csv(f"{dirpath}/results/{probeName}/probeList.csv",index=0)
+    df.to_csv(f"{DIR_PATH}/results/{probeName}/probeList.csv",index=0)
 
-def trainAndTest(dirpath, probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, probe):    
+def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, probe):    
     # This function trains the GMM models and tests them with the train and the test features
 
     t0 = time.time()
@@ -207,12 +208,12 @@ def trainAndTest(dirpath, probeName, trainFeatures, trainLabels, testFeatures, t
         \\end{center}
     """
 
-    with open(f"{dirpath}/results/{probeName}/{probe.name}_Execution.txt","w+") as file:
+    with open(f"{DIR_PATH}/results/{probeName}/{probe.name}_Execution.txt","w+") as file:
         file.write(message)
 
-    saveExecutionResults(probe.name,trainingTime,testingTrainTime,testingTestTime,trainScore,testScore,dirpath,probeName)
-    np.save(f"{dirpath}/results/{probeName}/{probe.name}_TrainConfusionMatrix", trainConfusionMatrix)
-    np.save(f"{dirpath}/results/{probeName}/{probe.name}_TestConfusionMatrix", testConfusionMatrix)
+    saveExecutionResults(probe.name,trainingTime,testingTrainTime,testingTestTime,trainScore,testScore,probeName)
+    np.save(f"{DIR_PATH}/results/{probeName}/{probe.name}_TrainConfusionMatrix", trainConfusionMatrix)
+    np.save(f"{DIR_PATH}/results/{probeName}/{probe.name}_TestConfusionMatrix", testConfusionMatrix)
 
 def getUniqueLabels(list1):
 # This function returns a list of the labels that exist in the dataset
@@ -239,34 +240,34 @@ def getUniqueLabels(list1):
 
     return sorted(unique_list)
 
-def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = 'C:/Users/Eder/source/repos/EMG-UKA-Trial-Analysis',experimentName='default',probes=[]):
+def main(experimentName='default',probes=[]):
 
     # To continue with execution, previous data must be removed
-    if os.path.isdir(f"{dirpath}/results/{experimentName}"):
+    if os.path.isdir(f"{DIR_PATH}/results/{experimentName}"):
         telegramNotification.sendTelegram("Pay attention to the execution!")
-        print(f"{dirpath}/results/{experimentName}/ already exists.\n")
+        print(f"{DIR_PATH}/results/{experimentName}/ already exists.\n")
         val = input("Do you want to remove previous results? (Y/N): ").upper()
         while (val != 'N') and (val != 'Y'):
             print("The introduced value is not valid.\n")
             val = input("Do you want to remove previous results? (Y/N): ").upper()
 
         if val == 'Y':
-            shutil.rmtree(f"{dirpath}/results/{experimentName}")
+            shutil.rmtree(f"{DIR_PATH}/results/{experimentName}")
         else:
             print("The script will not run until that folder is deleted. Otherwise, try changing the experiment name.")
             return
 
     try:
-        os.makedirs(f"{dirpath}/results/{experimentName}")
+        os.makedirs(f"{DIR_PATH}/results/{experimentName}")
     except:
         pass
 
-    probes2csv(probes,dirpath,experimentName)
+    probes2csv(probes,experimentName)
 
     # Create a dictionary number -> phoneme and save it for further checking
-    phoneDict = datasetManipulation.getPhoneDict(scriptpath)
+    phoneDict = datasetManipulation.getPhoneDict()
 
-    with open(f"{dirpath}/results/{experimentName}/phoneDict.pkl","wb+") as file:
+    with open(f"{DIR_PATH}/results/{experimentName}/phoneDict.pkl","wb+") as file:
         pickle.dump(phoneDict,file)
 
     # Create the description of the experiment
@@ -298,7 +299,7 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
         message += "\n"
 
     # Save the description to a text file
-    with open(f"{dirpath}/results/{experimentName}/description.txt","w+") as file:
+    with open(f"{DIR_PATH}/results/{experimentName}/description.txt","w+") as file:
         file.write(message)
 
     # Send the description as a Telegram message
@@ -323,8 +324,8 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
             lastUttType = probe.uttType
             lastAnalyzedLabels = probe.analyzedLabels
 
-            gatherDataIntoTable.main(dirpath,probe.uttType,subset='train',speaker=probe.speaker,session=probe.session)
-            gatherDataIntoTable.main(dirpath,probe.uttType,subset='test',speaker=probe.speaker,session=probe.session)
+            gatherDataIntoTable.main(probe.uttType,subset='train',speaker=probe.speaker,session=probe.session)
+            gatherDataIntoTable.main(probe.uttType,subset='test',speaker=probe.speaker,session=probe.session)
 
             # If the probes are done with a specific speaker and session, build the name of the file where it is saved.
             basename = ""
@@ -338,10 +339,10 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
             basename += f"{probe.uttType}"
             
             # Load the training and the testing datasets
-            trainTableFile = tables.open_file(f"{dirpath}/{basename}_train_Table.h5",mode='r')
+            trainTableFile = tables.open_file(f"{DIR_PATH}/{basename}_train_Table.h5",mode='r')
             trainTable = trainTableFile.root.data
 
-            testTableFile = tables.open_file(f"{dirpath}/{basename}_test_Table.h5",mode='r')
+            testTableFile = tables.open_file(f"{DIR_PATH}/{basename}_test_Table.h5",mode='r')
             testTable = testTableFile.root.data
 
             nExamples = np.shape(trainTable)[0]
@@ -352,13 +353,7 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
             trainTableFile.close()
             testTableFile.close()
 
-            # Define the parameters in order to calculate the row size and the name of the features
-            nChannels = 6
-            nFeatures = 5
-            stackingWidth = 15
-            featureNames = ['w','Pw','Pr','z','r']
-
-            rowSize = nChannels*nFeatures*(stackingWidth*2 + 1)
+            rowSize = N_CHANNELS*N_FEATURES*(STACKING_WIDTH*2 + 1)
 
             totalRemovedLabels = 0
 
@@ -391,14 +386,19 @@ def main(dirpath = 'C:/Users/Eder/Downloads/EMG-UKA-Trial-Corpus',scriptpath = '
             # uniqueLabels is a list of the different labels existing in the dataset
             uniqueLabels = getUniqueLabels([trainLabels,testLabels])
 
-            np.save(f"{dirpath}/results/{experimentName}/{probe.name}_uniqueLabels",uniqueLabels)
+            np.save(f"{DIR_PATH}/results/{experimentName}/{probe.name}_uniqueLabels",uniqueLabels)
 
         # Perform all the probes: Feature reduction, train and test
         if probe.reductionMethod == "SelectKBest":
-            reductedTrainFeatures, reductedTestFeatures = featureSelection(probe.n_features, probe.scoreFunction, trainFeatures, testFeatures, trainLabels, featureNames, nChannels, stackingWidth, dirpath,experimentName)
+            reductedTrainFeatures, reductedTestFeatures = featureSelection(probe.n_features, probe.scoreFunction, trainFeatures, testFeatures, trainLabels, experimentName)
         elif probe.reductionMethod == "LDAReduction":
-            reductedTrainFeatures, reductedTestFeatures = featureLDAReduction(probe.n_features, trainFeatures, testFeatures, trainLabels)
+            uniqueLabelsTrain = getUniqueLabels(trainLabels)
+            if probe.n_features > len(uniqueLabelsTrain) - 1:
+                print(f"The maximum number of components allowed in LDA reduction is n_classes - 1.\nThe n_classes in the train subset of this experiment is {len(uniqueLabelsTrain)}.")
+                raise ValueError
+            else:
+                reductedTrainFeatures, reductedTestFeatures = featureLDAReduction(probe.n_features, trainFeatures, testFeatures, trainLabels)
 
-        trainAndTest(dirpath, experimentName, reductedTrainFeatures, trainLabels, reductedTestFeatures, testLabels, uniqueLabels, probe)
+        trainAndTest(experimentName, reductedTrainFeatures, trainLabels, reductedTestFeatures, testLabels, uniqueLabels, probe)
 
-    gatherDataIntoTable.removeTables(dirpath)
+    gatherDataIntoTable.removeTables()

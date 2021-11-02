@@ -1,4 +1,5 @@
 import featureSelectionProbe
+from globalVars import DIR_PATH
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -56,13 +57,13 @@ class LabelOutcome:
         else:
             return self.__TN/(self.__TN + self.__FP)
 
-def loadProbeResults(dirpath,scriptpath,experimentName,probe: featureSelectionProbe.Probe,subset):
+def loadProbeResults(experimentName,probe: featureSelectionProbe.Probe,subset):
     # This function loads the confussion matrix, the phone dict and the list of unique labels
 
-    confusionMatrix = np.load(f"{dirpath}/results/{experimentName}/{probe.name}_{subset}ConfusionMatrix.npy").astype(int) # [True Labels x Predicted labels]
-    uniqueLabels = np.load(f"{dirpath}/results/{experimentName}/{probe.name}_uniqueLabels.npy").astype(int)
+    confusionMatrix = np.load(f"{DIR_PATH}/results/{experimentName}/{probe.name}_{subset}ConfusionMatrix.npy").astype(int) # [True Labels x Predicted labels]
+    uniqueLabels = np.load(f"{DIR_PATH}/results/{experimentName}/{probe.name}_uniqueLabels.npy").astype(int)
     
-    with open(f"{dirpath}/results/{experimentName}/phoneDict.pkl","rb") as file:
+    with open(f"{DIR_PATH}/results/{experimentName}/phoneDict.pkl","rb") as file:
         phoneDict = pickle.load(file)
     
     # uniquePhones: list of phones that have been used for classification
@@ -72,10 +73,11 @@ def loadProbeResults(dirpath,scriptpath,experimentName,probe: featureSelectionPr
         uniquePhones.append(phoneDict[elem])
     return confusionMatrix, phoneDict, uniqueLabels, uniquePhones
 
-def drawConfusionMatrix(dirpath,scriptpath,experimentName,probe: featureSelectionProbe.Probe,subset):
+def drawConfusionMatrix(experimentName,probe: featureSelectionProbe.Probe,subset):
     # This function draws a normalized confusion matrix and export the resulting figure as a image
 
-    confusionMatrix, phoneDict, uniqueLabels, uniquePhones = loadProbeResults(dirpath,scriptpath,experimentName,probe,subset)
+    
+    confusionMatrix, phoneDict, uniqueLabels, uniquePhones = loadProbeResults(experimentName,probe,subset)
     
     dfConfusionMatrix = pd.DataFrame(data=confusionMatrix,index=uniquePhones,columns=uniquePhones)
     dfConfusionMatrix = dfConfusionMatrix*100/dfConfusionMatrix.sum(axis=0) # Normalization done by columns: each column represents the 100% of the examples labeled as a same label.
@@ -87,13 +89,13 @@ def drawConfusionMatrix(dirpath,scriptpath,experimentName,probe: featureSelectio
     ax.set_xlabel("Predicted label")
     ax.set_ylabel("True label")
 
-    plt.savefig(f"{dirpath}/results/{experimentName}/{probe.name}_{subset}ConfusionMatrix.png")
+    plt.savefig(f"{DIR_PATH}/results/{experimentName}/{probe.name}_{subset}ConfusionMatrix.png")
 
-def getOutcomes(dirpath,scriptpath,experimentName,probe,subset):
+def getOutcomes(experimentName,probe,subset):
     # This function generates a text file with a table in LaTeX format (tabular) that contains the outcomes for each label:
     # True Positives, True Negatives, False Positives, False Negatives, Sensitivity, Specificity, Precision and Recall.
 
-    confusionMatrix, phoneDict, uniqueLabels, uniquePhones = loadProbeResults(dirpath,scriptpath,experimentName,probe,subset)
+    confusionMatrix, phoneDict, uniqueLabels, uniquePhones = loadProbeResults(experimentName,probe,subset)
 
     outcomes = {} # The outcomes of each label are saved in a dictionary, whose keys are the phoneme that corresponds to each label
     
@@ -112,7 +114,7 @@ def getOutcomes(dirpath,scriptpath,experimentName,probe,subset):
         outcomes[uniquePhones[i]] = outcome
     
     # Build the LaTeX table into a text file
-    with open(f"{dirpath}/results/{experimentName}/{probe.name}_{subset}OutcomesTable.txt","a+") as file:
+    with open(f"{DIR_PATH}/results/{experimentName}/{probe.name}_{subset}OutcomesTable.txt","a+") as file:
         # Build the heading of the table
         file.write('\\begin{tabular}{|c|c|c|c|c|c|c|}\n\\hline\n')
         file.write('\t\\textbf{Label} & \\textbf{TP} & \\textbf{TN} & \\textbf{FP} & \\textbf{FN} & \\textbf{Sens.} & \\textbf{Spec.} \\\\\n')
@@ -125,7 +127,7 @@ def getOutcomes(dirpath,scriptpath,experimentName,probe,subset):
 
         file.write('\\end{tabular}')
 
-def main(dirpath,scriptpath,experimentName,probes):
+def main(experimentName,probes):
     
     subsets = ["Train","Test"]
 
@@ -137,5 +139,5 @@ def main(dirpath,scriptpath,experimentName,probes):
 
         # Draw a confusion matrix and an outcomes table both for Train and Test subset
         for subset in subsets:
-            drawConfusionMatrix(dirpath,scriptpath,experimentName,probe,subset)
-            getOutcomes(dirpath,scriptpath,experimentName,probe,subset)
+            drawConfusionMatrix(experimentName,probe,subset)
+            getOutcomes(experimentName,probe,subset)

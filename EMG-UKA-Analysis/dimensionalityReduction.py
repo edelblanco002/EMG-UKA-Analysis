@@ -1,10 +1,14 @@
 import drawBarPlot
+from globalVars import DIR_PATH, FEATURE_NAMES, N_CHANNELS, STACKING_WIDTH
+import featureSelectionProbe
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.feature_selection import SelectKBest, f_classif, mutual_info_classif
 import time
 
-def featureSelection(nFeatures, method, trainFeatures, testFeatures, trainLabels, featureNames, nChannels, stackingWidth, dirpath, probeName):
+
+
+def featureSelection(nFeatures, method, trainFeatures, testFeatures, trainLabels, probeName):
     # This function performs the feature selection and also saves a table with the selected features sorted by the score given to them.
 
     t0 = time.time()
@@ -18,13 +22,13 @@ def featureSelection(nFeatures, method, trainFeatures, testFeatures, trainLabels
     newTrainFeatures = selector.fit_transform(trainFeatures,trainLabels) # Select the features and reduce the features on the train dataset in consonance
     newTestFeatures = selector.transform(testFeatures) # Reduce the features of the test set in consonance
 
-    colNames = drawBarPlot.getColNames(nChannels,stackingWidth,featureNames) # Obtain the name of all the features
+    colNames = drawBarPlot.getColNames() # Obtain the name of all the features
     ranking = drawBarPlot.printRanking(selector.scores_,colNames,nFeatures,method) # Obtain the ranking of the selected features as a string
 
     t1 = time.time()
 
     # Write the ranking into a text file
-    with open(f"{dirpath}/results/{probeName}/{method}{nFeatures}Ranking.txt","w+") as file:
+    with open(f"{DIR_PATH}/results/{probeName}/{method}{nFeatures}Ranking.txt","w+") as file:
         file.write(ranking)
 
     print("Feature selection results:")
@@ -41,9 +45,10 @@ def featureLDAReduction(nComponents, trainFeatures, testFeatures, trainLabels):
     t0 = time.time()
     
     LDASelector = LinearDiscriminantAnalysis(n_components=nComponents)
+
     newTrainFeatures = LDASelector.fit_transform(trainFeatures,trainLabels) # Reduce the dimensionality of the features
     newTestFeatures = LDASelector.transform(testFeatures) # Reduce the dimensionality of the test features in consonance
-    
+
     t1 = time.time()
     
     print("LDA results:")

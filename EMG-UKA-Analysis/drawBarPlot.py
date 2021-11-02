@@ -1,20 +1,21 @@
+from globalVars import DIR_PATH, FEATURE_NAMES, N_CHANNELS, STACKING_WIDTH
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import pdb
 
-def getColNames(channelN,stackingWidth,featureNames):
+def getColNames():
     # This function creates an array with the names that identifies each feature column
 
     # Channel names like 'Ch1', 'Ch2'...
     channelNames = []
-    for i in range(channelN):
+    for i in range(N_CHANNELS):
         channelNames.append(f"Ch{i+1}")
     
     # Frame names like 'Mn' for the frame -n, 'Pn' for the frame +n and '0' for the central frame
     frameNames = []
-    for i in range(-stackingWidth,stackingWidth+1):
+    for i in range(-STACKING_WIDTH,STACKING_WIDTH+1):
         if i < 0:
             frameNames.append(f"M{i*-1}")
         elif i > 0:
@@ -27,7 +28,7 @@ def getColNames(channelN,stackingWidth,featureNames):
     colNames = ['Position']
     for i in channelNames:
         for j in frameNames:
-            for k in featureNames:
+            for k in FEATURE_NAMES:
                 colNames.append(f"{i}_{j}_{k}")
 
     return colNames
@@ -59,7 +60,7 @@ def printRanking(scores,colNames,maxPosition,scoresName,latexFormat=True):
     # If latexFormat = False, the ranking will be written as plain text
 
     ranking = ""
-    sortedScores = sorted(scores)
+    sortedScores = sorted(scores)[0]
 
     if latexFormat:
         ranking += '\\begin{tabular}{|c|c|c|c|c|}\n\\hline\n'
@@ -67,7 +68,8 @@ def printRanking(scores,colNames,maxPosition,scoresName,latexFormat=True):
         ranking += '\t\\hline\\hline\n'
         for i in range(1,maxPosition+1):
             searchedValue = sortedScores[-i] # Selects the i. highest value
-            idx = np.where(scores == searchedValue)[0][0]
+            pdb.set_trace()
+            idx = np.where(scores == searchedValue)[1][0]
             channel, frame, feature = colNames[idx + 1].split('_')
             frame = frame.replace('P','+')
             frame = frame.replace('M', '-')
@@ -89,20 +91,22 @@ def printRanking(scores,colNames,maxPosition,scoresName,latexFormat=True):
     ranking = ranking.replace('& Pr &','& $P_r$ &')
     return ranking
 
-def main(dirPath,uttType,analyzedLabels):
+def main(uttType,analyzedLabels):
 
     fileBase = uttType + analyzedLabels
 
     # Load scores from numpy files
-    scoresFClass = np.load(dirPath + f'/scoresFClass{fileBase}.npy')
-    scoresMutual = np.load(dirPath + f'/scoresMutual{fileBase}.npy')
+    scoresFClass = np.load(DIR_PATH + f'/scoresFClass{fileBase}.npy')
+    scoresMutual = np.load(DIR_PATH + f'/scoresMutual{fileBase}.npy')
     
     channelN = 6
     stackingWidth = 15
     featureNames = ['w','Pw','Pr','z','r']
     
-    colNames = getColNames(channelN,stackingWidth,featureNames)
+    colNames = getColNames()
     
+    pdb.set_trace()
+
     # If the scores have been calculated by processing all examples at the same time (1 big single batch)
     # Don't draw bar plot, just print the ranking
     if np.shape(scoresFClass)[0] == 1:
@@ -129,11 +133,11 @@ def main(dirPath,uttType,analyzedLabels):
         fig = plt.figure()
         sns.barplot(data=dfFClass_tidy,y="Count",x="Feature",hue="Position")
         plt.xticks(rotation=90)
-        plt.show()
+        plt.savefig(f"{DIR_PATH}/{fileBase}FClassBarplot.png")
     
         sns.barplot(data=dfMutual_tidy,y="Count",x="Feature",hue="Position")
         plt.xticks(rotation=90)
-        plt.show()
+        plt.savefig(f"{DIR_PATH}/{fileBase}MutualBarplot.png")
 
     return
 
