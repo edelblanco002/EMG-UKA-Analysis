@@ -1,7 +1,7 @@
 from bar import printProgressBar
 import datasetManipulation
 import gatherDataIntoTable
-from globalVars import DIR_PATH, SCRIPT_PATH, N_BATCHES, ROW_SIZE
+from globalVars import DIR_PATH, SCRIPT_PATH, N_BATCHES, REMOVE_CONTEXT_PHONEMES, ROW_SIZE
 import math
 import numpy as np
 import pandas as pd
@@ -74,6 +74,12 @@ def main(uttType='audible',analyzedLabels='all',speaker='all',session='all'):
             batch, removedLabels = datasetManipulation.removeTransitionPhonemes(batch,phoneDict)
         elif analyzedLabels == 'transitions':
             batch, removedLabels = datasetManipulation.removeSimplePhonemes(batch,phoneDict)
+
+        totalRemovedLabels += removedLabels
+
+        # If the analyzed corpus is Pilot Study and removeContext is set to True, remove the context phonemes
+        if REMOVE_CONTEXT_PHONEMES:
+            batch, removedLabels = datasetManipulation.removeContextPhonesPilotStudy(batch,phoneDict)
 
         totalRemovedLabels += removedLabels
 

@@ -139,7 +139,7 @@ def removeTransitionPhonemes(batch,phoneDict):
     #print("\nremoveTransitionPhonemes execution time: ",time.time()-t0," s")
     return batch, removedExamples
 
-def removeUnwantedPhonesPilotStudy(batch,phoneDict):
+def removeContextPhonesPilotStudy(batch,phoneDict):
     # This function its made to work with the PilotStudy
     # The phonemes at the beggining and the end of the utterances are supposed to be marked with numbers
     # The purpose of this function is to remove those phonemes

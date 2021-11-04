@@ -2,7 +2,7 @@ from classifiers import *
 import datasetManipulation
 from dimensionalityReduction import *
 import gatherDataIntoTable
-from globalVars import DIR_PATH, N_CHANNELS, N_FEATURES, STACKING_WIDTH
+from globalVars import DIR_PATH, N_CHANNELS, N_FEATURES, REMOVE_CONTEXT_PHONEMES, STACKING_WIDTH
 import numpy as np
 import os
 import pandas as pd
@@ -370,9 +370,13 @@ def main(experimentName='default',probes=[]):
             elif probe.analyzedLabels == 'transitions':
                     trainBatch, removedLabels = datasetManipulation.removeSimplePhonemes(trainBatch,phoneDict)
                     testBatch = datasetManipulation.removeSimplePhonemes(testBatch,phoneDict)[0]
-            """elif analyzedLabels == 'pilotStudy':
-                    trainBatch, removedLabels = datasetManipulation.removeUnwantedPhonesPilotStudy(trainBatch,phoneDict)
-                    testBatch = datasetManipulation.removeUnwantedPhonesPilotStudy(testBatch,phoneDict)[0]"""
+            
+            totalRemovedLabels += removedLabels
+
+            # If the analyzed corpus is Pilot Study and removeContext is set to True, remove the context phonemes
+            if REMOVE_CONTEXT_PHONEMES:
+                    trainBatch, removedLabels = datasetManipulation.removeContextPhonesPilotStudy(trainBatch,phoneDict)
+                    testBatch = datasetManipulation.removeUnwantedPhonesPilotStudy(testBatch,phoneDict)[0]
 
             totalRemovedLabels += removedLabels
 
