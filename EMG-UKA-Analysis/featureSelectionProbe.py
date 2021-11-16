@@ -15,15 +15,36 @@ import time
 import uuid
 
 class Probe:
-    def __init__(self,reductionMethod='',n_features=0,classificationMethod='',scoreFunction='',n_estimators=0,min_samples_leaf=0,speaker='all',session='all',uttType='audible',analyzedLabels='simple'):
+    def __init__(self,reductionMethod='',n_features=0,classificationMethod='',scoreFunction='',n_estimators=0,min_samples_leaf=0,speaker='all',session='all',trainSpeaker='',trainSession='',testSpeaker='',testSession='',uttType='audible',analyzedLabels='simple'):
         self.name = uuid.uuid4().hex[:8]
 
         # Set speaker and session
-        self.speaker = speaker
-        if speaker == 'all':
-            self.session = 'all' # A session only can be specified for one speaker
-        else:
-            self.session = session
+        if trainSpeaker == '' and testSpeaker == '' and trainSession == '' and testSession == '': # If not different session or speaker has been specified for training and testing, use the speaker and session parameters for both them
+            self.trainSpeaker = speaker
+            self.testSpeaker = speaker
+            if speaker == 'all':
+                self.trainSession = 'all' # The session only can be specified for one concrete speaker
+                self.testSession = 'all'
+            else:
+                self.trainSession = session
+                self.testSession = session
+        else: # If any of the specific parameters for testing or training have been initialized
+            if trainSpeaker == '' or testSpeaker == '' or trainSession == '' or testSession == '': # Check if something is left unespecified
+                print("To set different users or sessions to training and testing, all the parameters must be given:")
+                print("\t- trainSpeaker\n\t- trainSession\n\t- testSpeaker\n\t- testSession")
+                raise ValueError
+            else: # The 4 parameters have been given, so use the given speakers
+                self.trainSpeaker = trainSpeaker
+                self.testSpeaker = testSpeaker
+                if trainSpeaker == 'all':
+                    self.trainSession = 'all' # The session only can be specified for one concrete speaker
+                else:
+                    self.trainSession = trainSession
+                if testSpeaker == 'all':
+                    self.testSession = 'all' # The session only can be specified for one concrete speaker
+                else:
+                    self.testSession = testSession
+
 
         # Validation rules
         allowedReductionMethods = ['SelectKBest','LDAReduction']
@@ -98,14 +119,16 @@ class Probe:
             self.min_samples_leaf = min_samples_leaf
 
 def probes2csv(probes,probeName):
-    df = pd.DataFrame(columns=['Name', 'Speaker', 'Session', 'Utterance type', 'Analyzed labels', 'Classification method', 'Reduction method', 'Score function', 'n_estimators', 'min_samples_leaf', 'n_features','Elapsed time in training','Elapsed time in testing with train subset','Elapsed time in testing with test subset','Accuracy with train subset','Accuracy with test subset'])
+    df = pd.DataFrame(columns=['Name', 'Train speaker', 'Train session','Test speaker', 'Test session', 'Utterance type', 'Analyzed labels', 'Classification method', 'Reduction method', 'Score function', 'n_estimators', 'min_samples_leaf', 'n_features','Elapsed time in training','Elapsed time in testing with train subset','Elapsed time in testing with test subset','Accuracy with train subset','Accuracy with test subset'])
 
     probe: Probe
     for probe in probes:
         row = {}
         row['Name'] = probe.name
-        row['Speaker'] = probe.speaker
-        row['Session'] = probe.session
+        row['trainSpeaker'] = probe.trainSpeaker
+        row['trainSession'] = probe.trainSession
+        row['testSpeaker'] = probe.testSpeaker
+        row['testSession'] = probe.testSession
         row['Utterance type'] = probe.uttType
         row['Analyzed labels'] = probe.analyzedLabels
         row['Classification method'] = probe.classificationMethod
@@ -220,7 +243,7 @@ def getUniqueLabels(list1):
 
     # intilize a null list
     unique_list = []
-     
+
     # If an only set of labels has been passed as argument
     if isinstance(list1,np.ndarray):
         # iterate over all elements
@@ -239,6 +262,53 @@ def getUniqueLabels(list1):
                     unique_list.append(x)
 
     return sorted(unique_list)
+
+def loadData(speaker,session,uttType,analyzedLabels,phoneDict,subset):
+    gatherDataIntoTable.main(uttType,subset=subset,speaker=speaker,session=session)
+            
+    # If the probes are done with a specific speaker and session, build the name of the file where it is saved.
+    basename = ""
+
+    if speaker != 'all':
+        basename += f"{speaker}_"
+
+        if session != 'all':
+            basename += f"{session}_"
+
+    basename += f"{uttType}"
+
+    # Load the training datasets
+    tableFile = tables.open_file(f"{DIR_PATH}/{basename}_{subset}_Table.h5",mode='r')
+    table = tableFile.root.data
+
+    batch = table[:]
+
+    tableFile.close()
+
+    # Remove examples with any NaN in their features
+    batch = datasetManipulation.removeNaN(batch)[0]
+
+    totalRemovedLabels = 0
+
+    removedLabels = 0
+
+    # If selected, take only the simple or the transition labels and discard the rest of the examples
+    if analyzedLabels == 'simple':
+        batch, removedLabels = datasetManipulation.removeTransitionPhonemes(batch,phoneDict)
+    elif analyzedLabels == 'transitions':
+        batch, removedLabels = datasetManipulation.removeSimplePhonemes(batch,phoneDict)
+                
+    totalRemovedLabels += removedLabels
+
+    # If the analyzed corpus is Pilot Study and removeContext is set to True, remove the context phonemes
+    if REMOVE_CONTEXT_PHONEMES:
+        batch, removedLabels = datasetManipulation.removeContextPhonesPilotStudy(batch,phoneDict)
+        totalRemovedLabels += removedLabels
+
+    # Separate labels (first column) from the features (rest of the columns)
+    features = batch[:,1:]
+    labels = batch[:,0]
+    return features, labels
 
 def main(experimentName='default',probes=[]):
 
@@ -277,8 +347,10 @@ def main(experimentName='default',probes=[]):
     for probe in probes:
         message += f"Name: {probe.name}\n"
 
-        message += f"- Speaker: {probe.speaker}\n"
-        message += f"- Session: {probe.session}\n"
+        message += f"- Train speaker: {probe.trainSpeaker}\n"
+        message += f"- Train session: {probe.trainSession}\n"
+        message += f"- Test speaker: {probe.testSpeaker}\n"
+        message += f"- Test session: {probe.testSession}\n"
         message += f"- Utterance type: {probe.uttType}\n"
         message += f"- Analyzed labels: {probe.analyzedLabels}\n"
 
@@ -306,86 +378,37 @@ def main(experimentName='default',probes=[]):
     telegramNotification.sendTelegram(message)
 
     # The probes are ordered by speaker, session, utterance type and analyzed labels, so that when there are several test that use the same frames, the batch is no rebuild.
-    probes = sorted(probes, key=lambda x: (x.speaker, x.session, x.uttType, x.analyzedLabels))
+    probes = sorted(probes, key=lambda x: (x.trainSpeaker, x.trainSession, x.uttType, x.analyzedLabels))
 
     # Variables to check if the speaker, the session, the utterance type or the analyzed labels have changed with each probe
-    lastSpeaker = 'None'
-    lastSession = 'None'
+    lastTrainSpeaker = 'None'
+    lastTrainSession = 'None'
+    lastTestSpeaker = 'None'
+    lastTestSession = 'None'
     lastUttType = 'None'
     lastAnalyzedLabels = 'None'
 
     probe: Probe
     for probe in probes:
         # If the speaker/session is different from the last probe, rebuild the batch
-        if probe.speaker != lastSpeaker or probe.session != lastSession or probe.uttType != lastUttType or probe.analyzedLabels != lastAnalyzedLabels:
-            # Update values
-            lastSpeaker = probe.speaker
-            lastSession = probe.session
+        if probe.trainSpeaker != lastTrainSpeaker or probe.trainSession != lastTrainSession or probe.testSpeaker != lastTestSpeaker or probe.testSession != lastTestSession or probe.uttType != lastUttType or probe.analyzedLabels != lastAnalyzedLabels:
+            if probe.trainSpeaker != lastTrainSpeaker or probe.trainSession != lastTrainSession or probe.uttType != lastUttType or probe.analyzedLabels != lastAnalyzedLabels:
+                # Update values
+                lastTrainSpeaker = probe.trainSpeaker
+                lastTrainSession = probe.trainSession
+
+                trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,phoneDict,'train')
+
+            if probe.testSpeaker != lastTestSpeaker or probe.testSession != lastTestSession or probe.uttType != lastUttType or probe.analyzedLabels != lastAnalyzedLabels:
+                # Update values
+                lastTestSpeaker = probe.testSpeaker
+                lastTestSession = probe.testSession
+
+                testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,phoneDict,'test')
+
+            # Update the rest of the values
             lastUttType = probe.uttType
             lastAnalyzedLabels = probe.analyzedLabels
-
-            gatherDataIntoTable.main(probe.uttType,subset='train',speaker=probe.speaker,session=probe.session)
-            gatherDataIntoTable.main(probe.uttType,subset='test',speaker=probe.speaker,session=probe.session)
-
-            # If the probes are done with a specific speaker and session, build the name of the file where it is saved.
-            basename = ""
-
-            if probe.speaker != 'all':
-                basename += f"{probe.speaker}_"
-
-                if probe.session != 'all':
-                    basename += f"{probe.session}_"
-
-            basename += f"{probe.uttType}"
-            
-            # Load the training and the testing datasets
-            trainTableFile = tables.open_file(f"{DIR_PATH}/{basename}_train_Table.h5",mode='r')
-            trainTable = trainTableFile.root.data
-
-            testTableFile = tables.open_file(f"{DIR_PATH}/{basename}_test_Table.h5",mode='r')
-            testTable = testTableFile.root.data
-
-            nExamples = np.shape(trainTable)[0]
-
-            trainBatch = trainTable[:]
-            testBatch = testTable[:]
-
-            trainTableFile.close()
-            testTableFile.close()
-
-            rowSize = N_CHANNELS*N_FEATURES*(STACKING_WIDTH*2 + 1)
-
-            totalRemovedLabels = 0
-
-            removedLabels = 0
-
-            # Remove examples with any NaN in their features
-            trainBatch = datasetManipulation.removeNaN(trainBatch)[0]
-            testBatch = datasetManipulation.removeNaN(testBatch)[0]
-
-            # If selected, take only the simple or the transition labels and discard the rest of the examples
-            if probe.analyzedLabels == 'simple':
-                    trainBatch, removedLabels = datasetManipulation.removeTransitionPhonemes(trainBatch,phoneDict)
-                    testBatch = datasetManipulation.removeTransitionPhonemes(testBatch,phoneDict)[0]
-            elif probe.analyzedLabels == 'transitions':
-                    trainBatch, removedLabels = datasetManipulation.removeSimplePhonemes(trainBatch,phoneDict)
-                    testBatch = datasetManipulation.removeSimplePhonemes(testBatch,phoneDict)[0]
-            
-            totalRemovedLabels += removedLabels
-
-            # If the analyzed corpus is Pilot Study and removeContext is set to True, remove the context phonemes
-            if REMOVE_CONTEXT_PHONEMES:
-                    trainBatch, removedLabels = datasetManipulation.removeContextPhonesPilotStudy(trainBatch,phoneDict)
-                    testBatch = datasetManipulation.removeUnwantedPhonesPilotStudy(testBatch,phoneDict)[0]
-
-            totalRemovedLabels += removedLabels
-
-            # Separate labels (first column) from the features (rest of the columns)
-            trainFeatures = trainBatch[:,1:]
-            trainLabels = trainBatch[:,0]
-
-            testFeatures = testBatch[:,1:]
-            testLabels = testBatch[:,0]
 
             # uniqueLabels is a list of the different labels existing in the dataset
             uniqueLabels = getUniqueLabels([trainLabels,testLabels])

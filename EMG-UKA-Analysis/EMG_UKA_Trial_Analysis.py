@@ -1,8 +1,4 @@
 import classifierEvaluation
-import drawHeatMap
-import drawBarPlot
-import gatherDataIntoTable
-import getFeatureScores
 import featureSelectionProbe
 from featureSelectionProbe import Probe
 import telegramNotification
@@ -14,7 +10,7 @@ analyzedLabels = 'Simple' # 'All', 'Simple', 'Transitions' or 'PilotStudy'
 #gatherDataIntoTable.main(dirpath,uttType,'train')
 #gatherDataIntoTable.main(dirpath,uttType,'test')
 
-experimentName = 'Prueba'
+experimentName = 'Speaker-008_TrainSession-001_TestSession-005'
 
 
 # Available reduction methods: 'SelectKBest', 'LDAReduction'
@@ -30,7 +26,7 @@ experimentName = 'Prueba'
        )
 ]"""
 
-speakersAndSessions = [
+"""speakersAndSessions = [
     ('002','001'),
     ('002','003'),
     ('002','101'),
@@ -59,9 +55,23 @@ for speaker, session in speakersAndSessions:
             n_features = 32,
             classificationMethod = 'GMMmodels'
         )
-    )
+    )"""
 
-#probes = [  Probe(    reductionMethod = 'LDAReduction',    n_features = 38,    classificationMethod = 'bagging',    n_estimators = 10,    min_samples_leaf = 10    )]
+probes = []
+
+probes.append(
+    Probe(
+        uttType='audible',
+        analyzedLabels='simple',
+        trainSpeaker='008',
+        trainSession='001',
+        testSpeaker='008',
+        testSession='005',
+        reductionMethod = 'LDAReduction',
+        n_features = 32,
+        classificationMethod = 'GMMmodels'
+    )
+)
 
 try:
     featureSelectionProbe.main(experimentName,probes)
