@@ -20,9 +20,9 @@ def buildTable(utteranceFiles,tableFileName='table',uttType='Audible'):
         utteranceFile = utteranceFile.replace('emg_','')
         speaker, session, utt = utteranceFile.split('-')
 
-        # file = open(f"{DIR_PATH}/features/{speaker}/{session}/e{str(N_CHANNELS+1).zfill(2)}_{speaker}_{session}_{utt}.npy",'rb')
-        round = session[-1]
-        file = open(f"{DIR_PATH}/features/{speaker}/{session}/emg_{str(N_CHANNELS+1).zfill(2)}ch_{speaker}_{uttType}{round}_{utt}.npy",'rb')
+        file = open(f"{DIR_PATH}/features/{speaker}/{session}/e{str(N_CHANNELS+1).zfill(2)}_{speaker}_{session}_{utt}.npy",'rb')
+        #round = session[-1]
+        #file = open(f"{DIR_PATH}/features/{speaker}/{session}/emg_{str(N_CHANNELS+1).zfill(2)}ch_{speaker}_{uttType}{round}_{utt}.npy",'rb')
         auxMat = np.load(file)
         file.close()
     

@@ -1,4 +1,4 @@
-from globalVars import SCRIPT_PATH
+from globalVars import SCRIPT_PATH, REMOVE_SILENCES
 import json
 from matplotlib import pyplot as plt
 import numpy as np
@@ -82,12 +82,13 @@ def removeSimplePhonemes(batch,phoneDict,reduceLabels=True):
     batch = batch[nz == True, :]
 
     # Remove transitions between silences
-    labelsToRemove = ['sp+sil','sp-sil','sil+sp','sil-sp']
+    if REMOVE_SILENCES:
+        labelsToRemove = ['sp+sil','sp-sil','sil+sp','sil-sp']
 
-    for key in sorted(phoneDict.keys()):
-        if phoneDict[key] in labelsToRemove:
-            nz = batch[:,0] == key
-            batch = batch[nz == False, :]
+        for key in sorted(phoneDict.keys()):
+            if phoneDict[key] in labelsToRemove:
+                nz = batch[:,0] == key
+                batch = batch[nz == False, :]
 
     # If reduceLabels, the labels with '-' are changed for the label of the same phoneme transition but with sign '+' (that shold be the previous label in the map, so it's the previous number)
     # That way, transitions are no considered to have two parts (A+B and A-B), but only one label for the same transition (A+B) 
@@ -122,15 +123,28 @@ def removeTransitionPhonemes(batch,phoneDict):
     batch = batch[nz == True, :]
 
     # Remove silence phonemes (sp and sil)
-    silenceLabels = []
-    for key in sorted(phoneDict.keys()):
-        if (phoneDict[key] == 'sil') or (phoneDict[key] == 'sp'):
-            silenceLabels.append(key)
+    if REMOVE_SILENCES:
+        labelsToRemove = ['sil','sp']
 
-    nz = batch[:,0] == silenceLabels[0]
-    batch = batch[nz == False, :]
-    nz = batch[:,0] == silenceLabels[1]
-    batch = batch[nz == False, :]
+        for key in sorted(phoneDict.keys()):
+            if phoneDict[key] in labelsToRemove:
+                nz = batch[:,0] == key
+                batch = batch[nz == False, :]
+    # If the silences are not removed, map 'sp' silences to 'sil'
+    else:
+        spLabel = -2 # -2 label does not exist, it's just a value to initialize the variable
+        silLabel = -2
+
+        for key in sorted(phoneDict.keys()):
+            # Which is the number key for sp label?
+            if phoneDict[key] == 'sp':
+                spLabel = key
+            # And which is the number key for sil label?
+            elif phoneDict[key] == 'sil':
+                silLabel = key
+            
+        # Assign to 'sp' labels the label of 'sil'
+        batch[batch[:,0] == spLabel, 0] = silLabel
 
     size1 = np.shape(batch)[0]
     removedExamples = size0 - size1

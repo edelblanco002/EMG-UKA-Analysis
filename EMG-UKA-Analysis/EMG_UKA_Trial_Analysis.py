@@ -30,7 +30,7 @@ experimentName = 'Prueba'
        )
 ]"""
 
-'''speakersAndSessions = [
+speakersAndSessions = [
     ('002','001'),
     ('002','003'),
     ('002','101'),
@@ -56,14 +56,12 @@ for speaker, session in speakersAndSessions:
             speaker=speaker,
             session=session,
             reductionMethod = 'LDAReduction',
-            n_features = 38,
-            classificationMethod = 'bagging',
-            n_estimators= 110,
-            min_samples_leaf=40
+            n_features = 32,
+            classificationMethod = 'GMMmodels'
         )
-    )'''
+    )
 
-probes = [  Probe(    reductionMethod = 'LDAReduction',    n_features = 38,    classificationMethod = 'bagging',    n_estimators = 10,    min_samples_leaf = 10    )]
+#probes = [  Probe(    reductionMethod = 'LDAReduction',    n_features = 38,    classificationMethod = 'bagging',    n_estimators = 10,    min_samples_leaf = 10    )]
 
 try:
     featureSelectionProbe.main(experimentName,probes)
