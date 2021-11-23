@@ -33,6 +33,8 @@ def testClassifier(clf, testFeatures, testLabels, uniqueLabels):
 def testGMMmodels(models, testFeatures, testLabels, uniqueLabels):
     # This function calculates the accuracy and saves the confusion matrix of the model
 
+    predictedLabels = []
+
     nSamples = len(testLabels)
     nLabels = len(uniqueLabels)
     
@@ -48,10 +50,11 @@ def testGMMmodels(models, testFeatures, testLabels, uniqueLabels):
             if uniqueLabels[l] in models.keys(): 
                 probs[l] = models[uniqueLabels[l]].score([testFeatures[n]])
             else:
-                probs[l] = 0
+                probs[l] = -100000
     
         # Find the label whose model has obtained the maximum likelihood
         predictedLabel = uniqueLabels[probs.argmax()]
+        predictedLabels.append(predictedLabel) # Just for debugging
         trueLabel = testLabels[n]
     
         # Update the score (number of well classificated examples)

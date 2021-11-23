@@ -1,10 +1,10 @@
 from bar import printProgressBar
-from globalVars import DIR_PATH, N_CHANNELS, ROW_SIZE
+from globalVars import CORPUS, DIR_PATH, N_CHANNELS, ROW_SIZE
 import numpy as np
 import os
 import tables
 
-def buildTable(utteranceFiles,tableFileName='table',uttType='Audible'):
+def buildTable(utteranceFiles,tableFileName='table',uttType='audible'):
     # This function reads the data from all files in the utteranceFiles list
     # and writes all together into a HDF5 file
 
@@ -15,14 +15,21 @@ def buildTable(utteranceFiles,tableFileName='table',uttType='Audible'):
     array_c = tableFile.create_earray(tableFile.root, 'data', atom, (0, ROW_SIZE))
     
     i = 0
-    printProgressBar(i, len(utteranceFiles), prefix = 'Progress:', suffix = 'Complete', length = 50)
+    printProgressBar(i, len(utteranceFiles), prefix = 'Progress:', suffix = f'{i}/{len(utteranceFiles)}', length = 50)
     for utteranceFile in utteranceFiles:
         utteranceFile = utteranceFile.replace('emg_','')
         speaker, session, utt = utteranceFile.split('-')
 
-        file = open(f"{DIR_PATH}/features/{speaker}/{session}/e{str(N_CHANNELS+1).zfill(2)}_{speaker}_{session}_{utt}.npy",'rb')
-        #round = session[-1]
-        #file = open(f"{DIR_PATH}/features/{speaker}/{session}/emg_{str(N_CHANNELS+1).zfill(2)}ch_{speaker}_{uttType}{round}_{utt}.npy",'rb')
+        if CORPUS == "EMG-UKA":
+            file = open(f"{DIR_PATH}/features/{speaker}/{session}/e{str(N_CHANNELS+1).zfill(2)}_{speaker}_{session}_{utt}.npy",'rb')
+
+        elif CORPUS == "Pilot Study":
+            round = session[-1]
+            file = open(f"{DIR_PATH}/features/{speaker}/{session}/emg_{str(N_CHANNELS+1).zfill(2)}ch_{speaker}_{uttType}{round}_{utt}.npy",'rb')
+        else:
+            print("The CORPUS parameter is bat defined in the globalVars.py file")
+            raise ValueError
+
         auxMat = np.load(file)
         file.close()
     
@@ -89,10 +96,6 @@ def removeTables():
 
 def main(uttType,subset='both',speaker='all',session='all'):
     
-    nChannels = 6
-    nFeatures = 5
-    stackingWidth = 15
-    
     files = getFilesList(uttType,subset,speaker=speaker,session=session)
 
     filename = ""
@@ -110,7 +113,7 @@ def main(uttType,subset='both',speaker='all',session='all'):
 
     filename += 'Table'
 
-    buildTable(files,filename)
+    buildTable(files,filename,uttType)
 
 
 if __name__ == '__main__':

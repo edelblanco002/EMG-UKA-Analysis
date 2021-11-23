@@ -3,7 +3,9 @@ DIR_PATH = "/mnt/ldisk/eder/EMG-UKA-Trial-Corpus"
 SCRIPT_PATH = "/home/aholab/eder/scripts/EMG-UKA-Analysis/EMG-UKA-Analysis"
 
 REMOVE_CONTEXT_PHONEMES = False
-REMOVE_SILENCES = False
+REMOVE_SILENCES = True
+
+CORPUS = "EMG-UKA" # "Pilot Study" or "EMG-UKA"
 
 FEATURE_NAMES = ["w","Pw","Pr","z","r"]
 N_CHANNELS = 6 # Number of channels (whitout the syncronization channel)

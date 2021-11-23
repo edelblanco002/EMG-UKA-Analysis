@@ -37,7 +37,7 @@ def featureSelection(nFeatures, method, trainFeatures, testFeatures, trainLabels
     print("Execution time",time.strftime('%H:%M:%S', time.gmtime(t1-t0)))
     print("\n")
 
-    return newTrainFeatures, newTestFeatures
+    return newTrainFeatures, newTestFeatures, selector
 
 def featureLDAReduction(nComponents, trainFeatures, testFeatures, trainLabels):
     # This function performons the LDA reduction of the features
@@ -57,4 +57,4 @@ def featureLDAReduction(nComponents, trainFeatures, testFeatures, trainLabels):
     print("Execution time",time.strftime('%H:%M:%S', time.gmtime(t1-t0)))
     print("\n")
 
-    return newTrainFeatures, newTestFeatures
+    return newTrainFeatures, newTestFeatures, LDASelector

@@ -114,9 +114,38 @@ class Probe:
             if min_samples_leaf == 0:
                 print("Please, give a value to 'min_samples_leaf'")
                 raise ValueError
+                
 
             self.n_estimators = n_estimators
             self.min_samples_leaf = min_samples_leaf
+
+        else:
+            self.n_estimators = ''
+            self.min_samples_leaf = ''
+
+def checkDifferences(lastProbe, currentProbe):
+    trainSpeaker = (lastProbe.trainSpeaker != currentProbe.trainSpeaker)
+    trainSession = (lastProbe.trainSession != currentProbe.trainSession)
+    testSpeaker = (lastProbe.testSpeaker != currentProbe.testSpeaker)
+    testSession = (lastProbe.testSession != currentProbe.testSession)
+    analyzedLabels = (lastProbe.analyzedLabels != currentProbe.analyzedLabels)
+    uttType = (lastProbe.uttType != currentProbe.uttType)
+    nFeatures = (lastProbe.n_features != currentProbe.n_features)
+    reductionMethod = (lastProbe.reductionMethod != currentProbe.reductionMethod)
+    scoreFunction = (lastProbe.scoreFunction != currentProbe.scoreFunction)
+    classificationMethod = (lastProbe.classificationMethod != currentProbe.classificationMethod)
+    nEstimators = (lastProbe.n_estimators != currentProbe.n_estimators)
+    minSamplesLeaf = (lastProbe.min_samples_leaf != currentProbe.min_samples_leaf)
+
+    trainingBatchHasChanged = trainSpeaker or trainSession or analyzedLabels or uttType
+    testingBatchHasChanged = testSpeaker or testSession or analyzedLabels or uttType
+
+    trainReductionHasChanged = trainingBatchHasChanged or nFeatures or reductionMethod or scoreFunction
+    testReductionHasChanged = testingBatchHasChanged or trainReductionHasChanged
+
+    classifierHasChanged = trainingBatchHasChanged or trainReductionHasChanged or classificationMethod or nEstimators or minSamplesLeaf
+
+    return trainingBatchHasChanged, testingBatchHasChanged, trainReductionHasChanged, testReductionHasChanged, classifierHasChanged
 
 def probes2csv(probes,probeName):
     df = pd.DataFrame(columns=['Name', 'Train speaker', 'Train session','Test speaker', 'Test session', 'Utterance type', 'Analyzed labels', 'Classification method', 'Reduction method', 'Score function', 'n_estimators', 'min_samples_leaf', 'n_features','Elapsed time in training','Elapsed time in testing with train subset','Elapsed time in testing with test subset','Accuracy with train subset','Accuracy with test subset'])
@@ -125,10 +154,10 @@ def probes2csv(probes,probeName):
     for probe in probes:
         row = {}
         row['Name'] = probe.name
-        row['trainSpeaker'] = probe.trainSpeaker
-        row['trainSession'] = probe.trainSession
-        row['testSpeaker'] = probe.testSpeaker
-        row['testSession'] = probe.testSession
+        row['Train speaker'] = probe.trainSpeaker
+        row['Train session'] = probe.trainSession
+        row['Test speaker'] = probe.testSpeaker
+        row['Test session'] = probe.testSession
         row['Utterance type'] = probe.uttType
         row['Analyzed labels'] = probe.analyzedLabels
         row['Classification method'] = probe.classificationMethod
@@ -157,27 +186,36 @@ def saveExecutionResults(name,trainingTime,testingTrainTime,testingTestTime,trai
 
     df.to_csv(f"{DIR_PATH}/results/{probeName}/probeList.csv",index=0)
 
-def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, probe):    
+def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, probe, classifierHasChanged):    
     # This function trains the GMM models and tests them with the train and the test features
 
     t0 = time.time()
 
-    if probe.classificationMethod == 'GMMmodels':
-        models = trainGMMmodels(trainFeatures, trainLabels, uniqueLabels)        
-    elif probe.classificationMethod == 'bagging':
-        clf = trainBaggingClassifier(trainFeatures, trainLabels, n_estimators=probe.n_estimators, min_samples_leaf=probe.min_samples_leaf)
+    if classifierHasChanged:
+        if probe.classificationMethod == 'GMMmodels':
+            clf = trainGMMmodels(trainFeatures, trainLabels, uniqueLabels)        
+        elif probe.classificationMethod == 'bagging':
+            clf = trainBaggingClassifier(trainFeatures, trainLabels, n_estimators=probe.n_estimators, min_samples_leaf=probe.min_samples_leaf)
 
     t1 = time.time()
 
-    if probe.classificationMethod == 'GMMmodels':
-        trainScore, trainConfusionMatrix = testGMMmodels(models, trainFeatures, trainLabels,uniqueLabels)
-    else:
-        trainScore, trainConfusionMatrix = testClassifier(clf, trainFeatures, trainLabels, uniqueLabels)
+    if classifierHasChanged:
+        if probe.classificationMethod == 'GMMmodels':
+            trainScore, trainConfusionMatrix = testGMMmodels(clf, trainFeatures, trainLabels,uniqueLabels)
+        else:
+            trainScore, trainConfusionMatrix = testClassifier(clf, trainFeatures, trainLabels, uniqueLabels)
+
+        with open(f"{DIR_PATH}/results/{probeName}/lastTrainingResults.pkl",'wb') as file:
+            pickle.dump([clf, trainScore, trainConfusionMatrix],file)
+
+    else: # Load the results of last training
+        with open(f"{DIR_PATH}/results/{probeName}/lastTrainingResults.pkl",'rb') as file:
+            clf, trainScore, trainConfusionMatrix = pickle.load(file)
 
     t2 = time.time()
 
     if probe.classificationMethod == 'GMMmodels':
-        testScore, testConfusionMatrix = testGMMmodels(models, testFeatures, testLabels, uniqueLabels)
+        testScore, testConfusionMatrix = testGMMmodels(clf, testFeatures, testLabels, uniqueLabels)
     else:
         testScore, testConfusionMatrix = testClassifier(clf, testFeatures, testLabels, uniqueLabels)
 
@@ -389,43 +427,43 @@ def main(experimentName='default',probes=[]):
     lastAnalyzedLabels = 'None'
 
     probe: Probe
-    for probe in probes:
+    for index, probe in enumerate(probes):
+        if index == 0: # If it's the first probe, every tasks must be done
+            trainingBatchHasChanged, testingBatchHasChanged, trainReductionHasChanged, testReductionHasChanged, classifierHasChanged = (True, )*5
+        else: # Check what has changed with respect to the previous test in order to save time avoiding unnecessary tasks
+            lastProbe: Probe
+            lastProbe = probes[index - 1]
+            currentProbe = probe
+            trainingBatchHasChanged, testingBatchHasChanged, trainReductionHasChanged, testReductionHasChanged, classifierHasChanged = checkDifferences(lastProbe, currentProbe)
+
         # If the speaker/session is different from the last probe, rebuild the batch
-        if probe.trainSpeaker != lastTrainSpeaker or probe.trainSession != lastTrainSession or probe.testSpeaker != lastTestSpeaker or probe.testSession != lastTestSession or probe.uttType != lastUttType or probe.analyzedLabels != lastAnalyzedLabels:
-            if probe.trainSpeaker != lastTrainSpeaker or probe.trainSession != lastTrainSession or probe.uttType != lastUttType or probe.analyzedLabels != lastAnalyzedLabels:
-                # Update values
-                lastTrainSpeaker = probe.trainSpeaker
-                lastTrainSession = probe.trainSession
+        if trainingBatchHasChanged:
+            trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,phoneDict,'train')
 
-                trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,phoneDict,'train')
+        if testingBatchHasChanged:
+            testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,phoneDict,'test')
 
-            if probe.testSpeaker != lastTestSpeaker or probe.testSession != lastTestSession or probe.uttType != lastUttType or probe.analyzedLabels != lastAnalyzedLabels:
-                # Update values
-                lastTestSpeaker = probe.testSpeaker
-                lastTestSession = probe.testSession
-
-                testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,phoneDict,'test')
-
-            # Update the rest of the values
-            lastUttType = probe.uttType
-            lastAnalyzedLabels = probe.analyzedLabels
-
-            # uniqueLabels is a list of the different labels existing in the dataset
+        # uniqueLabels is a list of the different labels existing in the dataset
+        if trainingBatchHasChanged or testingBatchHasChanged:
             uniqueLabels = getUniqueLabels([trainLabels,testLabels])
 
-            np.save(f"{DIR_PATH}/results/{experimentName}/{probe.name}_uniqueLabels",uniqueLabels)
+        np.save(f"{DIR_PATH}/results/{experimentName}/{probe.name}_uniqueLabels",uniqueLabels)
 
-        # Perform all the probes: Feature reduction, train and test
-        if probe.reductionMethod == "SelectKBest":
-            reductedTrainFeatures, reductedTestFeatures = featureSelection(probe.n_features, probe.scoreFunction, trainFeatures, testFeatures, trainLabels, experimentName)
-        elif probe.reductionMethod == "LDAReduction":
-            uniqueLabelsTrain = getUniqueLabels(trainLabels)
-            if probe.n_features > len(uniqueLabelsTrain) - 1:
-                print(f"The maximum number of components allowed in LDA reduction is n_classes - 1.\nThe n_classes in the train subset of this experiment is {len(uniqueLabelsTrain)}.")
-                raise ValueError
-            else:
-                reductedTrainFeatures, reductedTestFeatures = featureLDAReduction(probe.n_features, trainFeatures, testFeatures, trainLabels)
+        # Perform: Feature reduction, train and test
+        if trainReductionHasChanged: # If training batch or the dim. reduction options have changed: train the selector to reduce dimensionality
+            if probe.reductionMethod == "SelectKBest":
+                reductedTrainFeatures, reductedTestFeatures, selector = featureSelection(probe.n_features, probe.scoreFunction, trainFeatures, testFeatures, trainLabels, experimentName)
+            elif probe.reductionMethod == "LDAReduction":
+                uniqueLabelsTrain = getUniqueLabels(trainLabels)
+                if probe.n_features > len(uniqueLabelsTrain) - 1:
+                    print(f"The maximum number of components allowed in LDA reduction is n_classes - 1.\nThe n_classes in the train subset of this experiment is {len(uniqueLabelsTrain)}.")
+                    raise ValueError
+                else:
+                    reductedTrainFeatures, reductedTestFeatures, selector = featureLDAReduction(probe.n_features, trainFeatures, testFeatures, trainLabels)
+        else:   # If training batch remains the same, use the previous selector to reduce dimensionality of the testing subset
+            if testReductionHasChanged:
+                reductedTestFeatures = selector.transform(testFeatures)
 
-        trainAndTest(experimentName, reductedTrainFeatures, trainLabels, reductedTestFeatures, testLabels, uniqueLabels, probe)
+        trainAndTest(experimentName, reductedTrainFeatures, trainLabels, reductedTestFeatures, testLabels, uniqueLabels, probe, classifierHasChanged)
 
     gatherDataIntoTable.removeTables()
