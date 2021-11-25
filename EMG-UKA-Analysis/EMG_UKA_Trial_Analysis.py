@@ -33,13 +33,14 @@ for speaker, session in speakersAndSessions:
         Probe(
             uttType='audible',
             analyzedLabels='simple',
-            trainSpeaker='all',
-            trainSession='all',
+            trainSpeaker='002',
+            trainSession='001',
             testSpeaker=speaker,
             testSession=session,
-            reductionMethod = 'LDAReduction',
+            reductionMethod = 'NoReduction',
             n_features = 32,
-            classificationMethod = 'GMMmodels'
+            classificationMethod = 'GMMmodels',
+            useChannels=[1]
         )
     )
 

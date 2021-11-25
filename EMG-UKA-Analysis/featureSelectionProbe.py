@@ -15,9 +15,77 @@ import time
 import uuid
 
 class Probe:
-    def __init__(self,reductionMethod='',n_features=0,classificationMethod='',scoreFunction='',n_estimators=0,min_samples_leaf=0,speaker='all',session='all',trainSpeaker='',trainSession='',testSpeaker='',testSession='',uttType='audible',analyzedLabels='simple'):
+    def __init__(self,reductionMethod='',n_features=0,classificationMethod='',scoreFunction='',n_estimators=0,min_samples_leaf=0,speaker='all',session='all',trainSpeaker='',trainSession='',testSpeaker='',testSession='',uttType='audible',analyzedLabels='simple', useChannels=[]):
         self.name = uuid.uuid4().hex[:8]
 
+        # Validation rules
+        allowedReductionMethods = ['SelectKBest','LDAReduction','NoReduction']
+        allowedClassificationMethods = ['GMMmodels','bagging']
+        allowedScoreFunctions = ['f_classif','mutual_info_classif']
+        allowedUtteranceTypes = ['audible','whispered','silent']
+        allowedAnalyzedLabels = ['simple','transitions','all']
+
+        self.validateSpeakerAndSession(speaker, session, trainSpeaker, trainSession, testSpeaker, testSession)
+
+        self.validateUttType(uttType, allowedUtteranceTypes)
+
+        self.validateAnalyzedLabels(analyzedLabels, allowedAnalyzedLabels)
+
+        self.validateReductionMethod(reductionMethod, n_features, scoreFunction, allowedReductionMethods, allowedScoreFunctions)
+
+        self.validateClassificationMethod(classificationMethod, n_estimators, min_samples_leaf, allowedClassificationMethods)
+
+        self.validateUseChannels(useChannels)
+
+    def validateReductionMethod(self, reductionMethod, n_features, scoreFunction, allowedReductionMethods, allowedScoreFunctions):
+        # Validation of the reduction method
+        if not reductionMethod in allowedReductionMethods:
+            print("The allowed values for 'reductionMethod' are the following ones:")
+            for method in allowedReductionMethods:
+                print(f"- {method}")
+            raise ValueError
+        else:
+            self.reductionMethod = reductionMethod
+
+        # Validation of n_features
+        if n_features == 0:
+            print("Please, give a value to 'n_features'")
+            raise ValueError
+        else:
+            self.n_features = n_features
+
+        # If selected SelectKBest, validate the scoreFunction
+        if reductionMethod == 'SelectKBest':
+            if not scoreFunction in allowedScoreFunctions:
+                print("The allowed values for 'scoreFunction' are the following ones:")
+                for function in allowedScoreFunctions:
+                    print(f"- {function}")
+                raise ValueError
+            else:
+                self.scoreFunction = scoreFunction
+        else:
+            self.scoreFunction = ''
+
+    def validateAnalyzedLabels(self, analyzedLabels, allowedAnalyzedLabels):
+        # Validation of analyzed labels
+        if not analyzedLabels in allowedAnalyzedLabels:
+            print("The allowed values for 'analyzedLabels' are the following ones:")
+            for lab in allowedAnalyzedLabels:
+                print(f"- {lab}")
+        else:
+            self.analyzedLabels = analyzedLabels
+
+    def validateUttType(self, uttType, allowedUtteranceTypes):
+        # Validation of the utterance type
+        if not uttType in allowedUtteranceTypes:
+            print("The allowed values for 'uttType' are the following ones:")
+            for utt in allowedUtteranceTypes:
+                print(f"- {utt}")
+            raise ValueError
+        else:
+            self.uttType = uttType
+
+    def validateSpeakerAndSession(self, speaker, session, trainSpeaker, trainSession, testSpeaker, testSession):
         # Set speaker and session
         if trainSpeaker == '' and testSpeaker == '' and trainSession == '' and testSession == '': # If not different session or speaker has been specified for training and testing, use the speaker and session parameters for both them
             self.trainSpeaker = speaker
@@ -45,47 +113,7 @@ class Probe:
                 else:
                     self.testSession = testSession
 
-
-        # Validation rules
-        allowedReductionMethods = ['SelectKBest','LDAReduction']
-        allowedClassificationMethods = ['GMMmodels','bagging']
-        allowedScoreFunctions = ['f_classif','mutual_info_classif']
-        allowedUtteranceTypes = ['audible','whispered','silent']
-        allowedAnalyzedLabels = ['simple','transitions','all']
-
-        # Validation of the utterance type
-        if not uttType in allowedUtteranceTypes:
-            print("The allowed values for 'uttType' are the following ones:")
-            for utt in allowedUtteranceTypes:
-                print(f"- {utt}")
-            raise ValueError
-        else:
-            self.uttType = uttType
-
-        # Validation of analyzed labels
-        if not analyzedLabels in allowedAnalyzedLabels:
-            print("The allowed values for 'analyzedLabels' are the following ones:")
-            for lab in allowedAnalyzedLabels:
-                print(f"- {lab}")
-        else:
-            self.analyzedLabels = analyzedLabels
-
-        # Validation of the reduction method
-        if not reductionMethod in allowedReductionMethods:
-            print("The allowed values for 'reductionMethod' are the following ones:")
-            for method in allowedReductionMethods:
-                print(f"- {method}")
-            raise ValueError
-        else:
-            self.reductionMethod = reductionMethod
-
-        # Validation of n_features
-        if n_features == 0:
-            print("Please, give a value to 'n_features'")
-            raise ValueError
-        else:
-            self.n_features = n_features
-
+    def validateClassificationMethod(self, classificationMethod, n_estimators, min_samples_leaf, allowedClassificationMethods):
         # Validation of the classification method
         if not classificationMethod in allowedClassificationMethods:
             print("The allowed values for 'classificationMethod' are the following ones:")
@@ -94,18 +122,6 @@ class Probe:
             raise ValueError
         else:
             self.classificationMethod = classificationMethod
-
-        # If selected SelectKBest, validate the scoreFunction
-        if reductionMethod == 'SelectKBest':
-            if not scoreFunction in allowedScoreFunctions:
-                print("The allowed values for 'scoreFunction' are the following ones:")
-                for function in allowedScoreFunctions:
-                    print(f"- {function}")
-                raise ValueError
-            else:
-                self.scoreFunction = scoreFunction
-        else:
-            self.scoreFunction = ''
 
         if classificationMethod == 'bagging':
             if n_estimators == 0:
@@ -122,6 +138,16 @@ class Probe:
         else:
             self.n_estimators = ''
             self.min_samples_leaf = ''
+
+    def validateUseChannels(self, useChannels):
+        useChannels_set = set(useChannels)
+        if len(useChannels) != len(useChannels_set): # Check if there are repeated channels
+            print("Some channel has been repeated. You only can select each channel once.")
+            raise ValueError
+        if True in [i >= N_CHANNELS for i in useChannels]: # Check if the selected channels are into the available range
+            print(f"The number of available channels is {N_CHANNELS}. The selected channels must be between 0 and {N_CHANNELS - 1}.")
+            raise ValueError
+        self.useChannels = useChannels
 
 def checkDifferences(lastProbe, currentProbe):
     trainSpeaker = (lastProbe.trainSpeaker != currentProbe.trainSpeaker)
@@ -185,6 +211,18 @@ def saveExecutionResults(name,trainingTime,testingTrainTime,testingTestTime,trai
     df.loc[df['Name'] == name,['Accuracy with test subset']] = testScore
 
     df.to_csv(f"{DIR_PATH}/results/{probeName}/probeList.csv",index=0)
+
+def selectChannels(features: np.ndarray,useChannels: list):
+    nFrames = features.shape[0]
+    featuresPerChannel = N_FEATURES*(STACKING_WIDTH*2 + 1)
+    nOutputFeatures = len(useChannels)*featuresPerChannel
+
+    outputFeatures = np.zeros((nFrames,nOutputFeatures))
+
+    for i, channel in enumerate(useChannels):
+        outputFeatures[:,i*featuresPerChannel:(i+1)*featuresPerChannel] = features[:,channel*featuresPerChannel:(channel+1)*featuresPerChannel]
+
+    return outputFeatures
 
 def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, probe, classifierHasChanged):    
     # This function trains the GMM models and tests them with the train and the test features
@@ -301,7 +339,7 @@ def getUniqueLabels(list1):
 
     return sorted(unique_list)
 
-def loadData(speaker,session,uttType,analyzedLabels,phoneDict,subset):
+def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset):
     gatherDataIntoTable.main(uttType,subset=subset,speaker=speaker,session=session)
             
     # If the probes are done with a specific speaker and session, build the name of the file where it is saved.
@@ -345,6 +383,10 @@ def loadData(speaker,session,uttType,analyzedLabels,phoneDict,subset):
 
     # Separate labels (first column) from the features (rest of the columns)
     features = batch[:,1:]
+
+    if useChannels != []: # If only some channels have been selected
+        features = selectChannels(features,useChannels)
+
     labels = batch[:,0]
     return features, labels
 
@@ -396,8 +438,11 @@ def main(experimentName='default',probes=[]):
             message += f"- SelectKBest with k={probe.n_features} and {probe.scoreFunction} function.\n"
         elif probe.reductionMethod == 'LDAReduction':
             message += f"- LDA reduction with {probe.n_features} components.\n"
+        elif probe.reductionMethod == 'NoReduction':
+            message += f"- No dimensionality reduction.\n"
         else:
             print("Invalid reduction method")
+            raise ValueError
             return
 
         message += f"- Classificating with '{probe.classificationMethod}'.\n"
@@ -418,14 +463,6 @@ def main(experimentName='default',probes=[]):
     # The probes are ordered by speaker, session, utterance type and analyzed labels, so that when there are several test that use the same frames, the batch is no rebuild.
     probes = sorted(probes, key=lambda x: (x.trainSpeaker, x.trainSession, x.uttType, x.analyzedLabels))
 
-    # Variables to check if the speaker, the session, the utterance type or the analyzed labels have changed with each probe
-    lastTrainSpeaker = 'None'
-    lastTrainSession = 'None'
-    lastTestSpeaker = 'None'
-    lastTestSession = 'None'
-    lastUttType = 'None'
-    lastAnalyzedLabels = 'None'
-
     probe: Probe
     for index, probe in enumerate(probes):
         if index == 0: # If it's the first probe, every tasks must be done
@@ -438,10 +475,10 @@ def main(experimentName='default',probes=[]):
 
         # If the speaker/session is different from the last probe, rebuild the batch
         if trainingBatchHasChanged:
-            trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,phoneDict,'train')
+            trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'train')
 
         if testingBatchHasChanged:
-            testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,phoneDict,'test')
+            testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'test')
 
         # uniqueLabels is a list of the different labels existing in the dataset
         if trainingBatchHasChanged or testingBatchHasChanged:
@@ -460,9 +497,17 @@ def main(experimentName='default',probes=[]):
                     raise ValueError
                 else:
                     reductedTrainFeatures, reductedTestFeatures, selector = featureLDAReduction(probe.n_features, trainFeatures, testFeatures, trainLabels)
+            elif probe.reductionMethod == 'NoReduction':
+                print("Feature reduction ommited")
+                reductedTrainFeatures = trainFeatures[:]
+                reductedTestFeatures = testFeatures[:]
         else:   # If training batch remains the same, use the previous selector to reduce dimensionality of the testing subset
             if testReductionHasChanged:
-                reductedTestFeatures = selector.transform(testFeatures)
+                if probe.reductionMethod != 'NoReduction':
+                    reductedTestFeatures = selector.transform(testFeatures)
+                else:
+                    print("Feature reduction ommited")
+                    reductedTestFeatures = testFeatures[:]
 
         trainAndTest(experimentName, reductedTrainFeatures, trainLabels, reductedTestFeatures, testLabels, uniqueLabels, probe, classifierHasChanged)
 
