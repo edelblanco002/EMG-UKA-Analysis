@@ -4,7 +4,7 @@ from featureSelectionProbe import Probe
 import telegramNotification
 import traceback
 
-experimentName = 'Prueba'
+experimentName = 'Session_Dependent_SelectKBest_100_Bagging_100_50'
 
 # Available reduction methods: 'SelectKBest', 'LDAReduction'
 # Available scoreFunction (only for 'SelectKBest'): 'f_classif', 'mutual_into_classif'
@@ -33,14 +33,16 @@ for speaker, session in speakersAndSessions:
         Probe(
             uttType='audible',
             analyzedLabels='simple',
-            trainSpeaker='002',
-            trainSession='001',
+            trainSession='all',
+            trainSpeaker='all',
             testSpeaker=speaker,
             testSession=session,
-            reductionMethod = 'NoReduction',
-            n_features = 32,
-            classificationMethod = 'GMMmodels',
-            useChannels=[1]
+            reductionMethod = 'SelectKBest',
+            scoreFunction='f_classif',
+            n_features = 100,
+            classificationMethod = 'bagging',
+            n_estimators=100,
+            min_samples_leaf=50
         )
     )
 

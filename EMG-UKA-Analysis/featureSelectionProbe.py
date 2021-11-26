@@ -149,13 +149,14 @@ class Probe:
             raise ValueError
         self.useChannels = useChannels
 
-def checkDifferences(lastProbe, currentProbe):
+def checkDifferences(lastProbe: Probe, currentProbe: Probe):
     trainSpeaker = (lastProbe.trainSpeaker != currentProbe.trainSpeaker)
     trainSession = (lastProbe.trainSession != currentProbe.trainSession)
     testSpeaker = (lastProbe.testSpeaker != currentProbe.testSpeaker)
     testSession = (lastProbe.testSession != currentProbe.testSession)
     analyzedLabels = (lastProbe.analyzedLabels != currentProbe.analyzedLabels)
     uttType = (lastProbe.uttType != currentProbe.uttType)
+    useChannels = (lastProbe.useChannels != currentProbe.useChannels)
     nFeatures = (lastProbe.n_features != currentProbe.n_features)
     reductionMethod = (lastProbe.reductionMethod != currentProbe.reductionMethod)
     scoreFunction = (lastProbe.scoreFunction != currentProbe.scoreFunction)
@@ -163,8 +164,8 @@ def checkDifferences(lastProbe, currentProbe):
     nEstimators = (lastProbe.n_estimators != currentProbe.n_estimators)
     minSamplesLeaf = (lastProbe.min_samples_leaf != currentProbe.min_samples_leaf)
 
-    trainingBatchHasChanged = trainSpeaker or trainSession or analyzedLabels or uttType
-    testingBatchHasChanged = testSpeaker or testSession or analyzedLabels or uttType
+    trainingBatchHasChanged = trainSpeaker or trainSession or analyzedLabels or uttType or useChannels
+    testingBatchHasChanged = testSpeaker or testSession or analyzedLabels or uttType or useChannels
 
     trainReductionHasChanged = trainingBatchHasChanged or nFeatures or reductionMethod or scoreFunction
     testReductionHasChanged = testingBatchHasChanged or trainReductionHasChanged

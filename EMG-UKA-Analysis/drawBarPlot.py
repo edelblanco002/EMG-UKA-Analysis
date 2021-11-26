@@ -60,7 +60,7 @@ def printRanking(scores,colNames,maxPosition,scoresName,latexFormat=True):
     # If latexFormat = False, the ranking will be written as plain text
 
     ranking = ""
-    sortedScores = sorted(scores)[0]
+    sortedScores = sorted(scores)
 
     if latexFormat:
         ranking += '\\begin{tabular}{|c|c|c|c|c|}\n\\hline\n'
@@ -68,8 +68,7 @@ def printRanking(scores,colNames,maxPosition,scoresName,latexFormat=True):
         ranking += '\t\\hline\\hline\n'
         for i in range(1,maxPosition+1):
             searchedValue = sortedScores[-i] # Selects the i. highest value
-            pdb.set_trace()
-            idx = np.where(scores == searchedValue)[1][0]
+            idx = np.where(scores == searchedValue)[0][0]
             channel, frame, feature = colNames[idx + 1].split('_')
             frame = frame.replace('P','+')
             frame = frame.replace('M', '-')
