@@ -1,8 +1,48 @@
 from bar import printProgressBar
-from globalVars import CORPUS, DIR_PATH, N_CHANNELS, ROW_SIZE
+from globalVars import CORPUS, DIR_PATH, N_CHANNELS, MFCC_ROW_SIZE, ROW_SIZE
 import numpy as np
 import os
 import tables
+
+def buildMFCCTable(utteranceFiles,tableFileName='table',uttType='audible'):
+    # This function reads the data from all files in the utteranceFiles list
+    # and writes all together into a HDF5 file
+
+    tableFile = tables.open_file(f"{DIR_PATH}/{tableFileName}.h5",mode='w', title="Features from audible utterances")
+    atom = tables.Float32Atom()
+    
+    # Create the array_c to write into the HDF5 file. Each example is appended as a new row
+    array_c = tableFile.create_earray(tableFile.root, 'data', atom, (0, MFCC_ROW_SIZE))
+    
+    i = 0
+    printProgressBar(i, len(utteranceFiles), prefix = 'Progress:', suffix = f'{i}/{len(utteranceFiles)}', length = 50)
+    for utteranceFile in utteranceFiles:
+        utteranceFile = utteranceFile.replace('emg_','')
+        speaker, session, utt = utteranceFile.split('-')
+
+        if CORPUS == "EMG-UKA":
+            file = open(f"{DIR_PATH}/mfccs/{speaker}/{session}/a_{speaker}_{session}_{utt}.npy",'rb')
+
+        elif CORPUS == "Pilot Study":
+            round = session[-1]
+            file = open(f"{DIR_PATH}/mfccs/{speaker}/{session}/a_{speaker}_{uttType}{round}_{utt}.npy",'rb')
+        else:
+            print("The CORPUS parameter is bat defined in the globalVars.py file")
+            raise ValueError
+
+        auxMat = np.load(file)
+        file.close()
+    
+        for idx in range(np.shape(auxMat)[0]):
+            array_c.append([auxMat[idx]])
+    
+        i += 1
+        printProgressBar(i, len(utteranceFiles), prefix = 'Progress:', suffix = f'{i}/{len(utteranceFiles)}', length = 50)
+    
+    del auxMat
+    tableFile.close()
+
+    return
 
 def buildTable(utteranceFiles,tableFileName='table',uttType='audible'):
     # This function reads the data from all files in the utteranceFiles list
@@ -94,7 +134,7 @@ def removeTables():
         os.remove(filePath)
 
 
-def main(uttType,subset='both',speaker='all',session='all'):
+def main(uttType,subset='both',speaker='all',session='all',analyzeMFFCs=False):
     
     files = getFilesList(uttType,subset,speaker=speaker,session=session)
 
@@ -113,7 +153,10 @@ def main(uttType,subset='both',speaker='all',session='all'):
 
     filename += 'Table'
 
-    buildTable(files,filename,uttType)
+    if analyzeMFFCs:
+        buildMFCCTable(files,filename,uttType)
+    else:
+        buildTable(files,filename,uttType)
 
 
 if __name__ == '__main__':

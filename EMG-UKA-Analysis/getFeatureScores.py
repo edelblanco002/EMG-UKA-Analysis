@@ -1,7 +1,7 @@
 from bar import printProgressBar
 import datasetManipulation
 import gatherDataIntoTable
-from globalVars import DIR_PATH, SCRIPT_PATH, N_BATCHES, REMOVE_CONTEXT_PHONEMES, ROW_SIZE
+from globalVars import DIR_PATH, SCRIPT_PATH, N_BATCHES, REMOVE_CONTEXT_PHONEMES, MFCC_ROW_SIZE, ROW_SIZE
 import math
 import numpy as np
 import pandas as pd
@@ -22,7 +22,7 @@ def getFeatureScores(batch):
 
     return clfFClass.scores_, clfMutual.scores_
 
-def main(uttType='audible',analyzedLabels='all',speaker='all',session='all'):
+def main(uttType='audible',analyzedLabels='all',speaker='all',session='all',analyzeMFCCs=False):
         
     phoneDict = datasetManipulation.getPhoneDict()
     
@@ -44,8 +44,13 @@ def main(uttType='audible',analyzedLabels='all',speaker='all',session='all'):
     
     nExamples = np.shape(table)[0]
     
-    scoresFClass = np.zeros((N_BATCHES,ROW_SIZE - 1))
-    scoresMutual = np.zeros((N_BATCHES,ROW_SIZE - 1))
+    if analyzeMFCCs:
+        row_size = ROW_SIZE
+    else:
+        row_size = MFCC_ROW_SIZE
+
+    scoresFClass = np.zeros((N_BATCHES,row_size - 1))
+    scoresMutual = np.zeros((N_BATCHES,row_size - 1))
     
     totalRemovedNan = 0
     totalRemovedLabels = 0

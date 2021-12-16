@@ -15,7 +15,7 @@ import time
 import uuid
 
 class Probe:
-    def __init__(self,reductionMethod='',n_features=0,classificationMethod='',scoreFunction='',n_estimators=0,min_samples_leaf=0,speaker='all',session='all',trainSpeaker='',trainSession='',testSpeaker='',testSession='',uttType='audible',analyzedLabels='simple', useChannels=[]):
+    def __init__(self,reductionMethod='',n_features=0,classificationMethod='',scoreFunction='',n_estimators=0,min_samples_leaf=0,speaker='all',session='all',trainSpeaker='',trainSession='',testSpeaker='',testSession='',uttType='audible',analyzedLabels='simple', useChannels=[], analyzeMFCCs=False):
         self.name = uuid.uuid4().hex[:8]
 
         # Validation rules
@@ -36,6 +36,8 @@ class Probe:
         self.validateClassificationMethod(classificationMethod, n_estimators, min_samples_leaf, allowedClassificationMethods)
 
         self.validateUseChannels(useChannels)
+
+        self.analyzeMFCCs = analyzeMFCCs
 
     def validateReductionMethod(self, reductionMethod, n_features, scoreFunction, allowedReductionMethods, allowedScoreFunctions):
         # Validation of the reduction method
@@ -340,8 +342,8 @@ def getUniqueLabels(list1):
 
     return sorted(unique_list)
 
-def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset):
-    gatherDataIntoTable.main(uttType,subset=subset,speaker=speaker,session=session)
+def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFFCs):
+    gatherDataIntoTable.main(uttType,subset=subset,speaker=speaker,session=session,analyzeMFFCs=analyzeMFFCs)
             
     # If the probes are done with a specific speaker and session, build the name of the file where it is saved.
     basename = ""
@@ -476,10 +478,10 @@ def main(experimentName='default',probes=[]):
 
         # If the speaker/session is different from the last probe, rebuild the batch
         if trainingBatchHasChanged:
-            trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'train')
+            trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'train',probe.analyzeMFCCs)
 
         if testingBatchHasChanged:
-            testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'test')
+            testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'test',probe.analyzeMFCCs)
 
         # uniqueLabels is a list of the different labels existing in the dataset
         if trainingBatchHasChanged or testingBatchHasChanged:
