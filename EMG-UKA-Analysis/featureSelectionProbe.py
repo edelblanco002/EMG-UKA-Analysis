@@ -343,6 +343,13 @@ def getUniqueLabels(list1):
     return sorted(unique_list)
 
 def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFFCs):
+    # If speaker or session have been marked with '-all' in order to use both train and test subsets,
+    # then remove the '-all' mark
+    if speaker.endswith('-all'):
+        speaker = speaker[:-4]
+    if session.endswith('-all'):
+        session = session[:-4]
+
     gatherDataIntoTable.main(uttType,subset=subset,speaker=speaker,session=session,analyzeMFFCs=analyzeMFFCs)
             
     # If the probes are done with a specific speaker and session, build the name of the file where it is saved.
@@ -356,8 +363,11 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset
 
     basename += f"{uttType}"
 
+    if subset != 'both':
+        basename += f"_{subset}"
+
     # Load the training datasets
-    tableFile = tables.open_file(f"{DIR_PATH}/{basename}_{subset}_Table.h5",mode='r')
+    tableFile = tables.open_file(f"{DIR_PATH}/{basename}Table.h5",mode='r')
     table = tableFile.root.data
 
     batch = table[:]
@@ -391,6 +401,55 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset
         features = selectChannels(features,useChannels)
 
     labels = batch[:,0]
+    return features, labels
+
+def loadMultipleData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFFCs):
+    if (type(speaker) is tuple):
+        if session != 'all':
+            print(f"ERROR: If you are selecting multiple speakers for {subset}ing, you must select all sessions.")
+            raise ValueError
+        else:
+            features, labels = loadMultipleSpeakers(speaker,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFFCs)
+    else: # If speaker is not a tuple, then session must be a tuple
+        features, labels = loadMultipleSessions(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFFCs)
+
+    return features, labels
+
+def loadMultipleSessions(speaker,sessions,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFCCs):
+    currentSession: str
+    for currentSession in sessions:
+        # Load features and labels from current session
+        if not currentSession.endswith('-all'):
+            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFCCs)
+        else:
+            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,phoneDict,'both',analyzeMFCCs)
+        # Add it to the output
+        if currentSession == sessions[0]: # If it's the first session, just copy the matrix to the output
+            features = currentFeatures[:]
+            labels = currentLabels[:]
+        else: # For the rest of the sessions, stack them vertically to the output matrix
+            features = np.concatenate((features,currentFeatures), axis=0)
+            labels = np.concatenate((labels,currentLabels), axis=0)
+
+    return features, labels
+
+def loadMultipleSpeakers(speakers,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFCCs):
+    currentSpeaker: str
+    for currentSpeaker in speakers:
+        # Load data for current speaker
+        if not currentSpeaker.endswith('-all'):
+            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFCCs)
+        else:
+            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,phoneDict,'both',analyzeMFCCs)
+    
+        # Add it to the output
+        if currentSpeaker == speakers[0]: # If it's the first speaker, just copy loaded data to the output
+            features = currentFeatures[:]
+            labels = currentLabels[:]
+        else: # For the rest of the speakers, stack the new features vertically to output matrix
+            features = np.concatenate((features,currentFeatures), axis=0)
+            labels = np.concatenate((labels,currentLabels), axis=0)
+
     return features, labels
 
 def main(experimentName='default',probes=[]):
@@ -478,11 +537,28 @@ def main(experimentName='default',probes=[]):
 
         # If the speaker/session is different from the last probe, rebuild the batch
         if trainingBatchHasChanged:
-            trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'train',probe.analyzeMFCCs)
+            if (type(probe.trainSpeaker) is str) and (type(probe.trainSession) is str):
+                if (not probe.trainSpeaker.endswith('-all')) and (not probe.trainSession.endswith('-all')):
+                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'train',probe.analyzeMFCCs)
+                else:
+                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'both',probe.analyzeMFCCs)
+            elif (type(probe.trainSpeaker) is tuple) or (type(probe.trainSession) is tuple):
+                trainFeatures, trainLabels = loadMultipleData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'train',probe.analyzeMFCCs)
+            else:
+                print(f'ERROR: Wrong type for trainSpeaker ({probe.trainSpeaker}) or trainSession ({probe.trainSession})')
+                raise ValueError
 
         if testingBatchHasChanged:
-            testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'test',probe.analyzeMFCCs)
-
+            if (type(probe.testSpeaker) is str) and (type(probe.testSession) is str):
+                if not probe.testSpeaker.endswith('-all') and not probe.testSession.endswith('-all'):
+                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'test',probe.analyzeMFCCs)
+                else:
+                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'both',probe.analyzeMFCCs)
+            elif (type(probe.testSpeaker) is tuple) or (type(probe.testSession) is tuple):
+                testFeatures, testLabels = loadMultipleData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'test',probe.analyzeMFCCs)
+            else:
+                print(f'ERROR: Wrong type for testSpeaker ({probe.testSpeaker}) or testSession ({probe.testSession})')
+                raise ValueError
         # uniqueLabels is a list of the different labels existing in the dataset
         if trainingBatchHasChanged or testingBatchHasChanged:
             uniqueLabels = getUniqueLabels([trainLabels,testLabels])

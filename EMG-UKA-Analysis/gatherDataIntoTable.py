@@ -134,8 +134,8 @@ def removeTables():
         os.remove(filePath)
 
 
-def main(uttType,subset='both',speaker='all',session='all',analyzeMFFCs=False):
-    
+def main(uttType,subset='both',speaker='all',session='all',analyzeMFFCs=False):        
+
     files = getFilesList(uttType,subset,speaker=speaker,session=session)
 
     filename = ""
