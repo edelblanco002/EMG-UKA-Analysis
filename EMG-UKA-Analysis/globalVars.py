@@ -8,12 +8,12 @@ REMOVE_SILENCES = True
 CORPUS = "EMG-UKA" # "Pilot Study" or "EMG-UKA"
 
 # Features:
-# - Mw:
-# - Pw
-# - Mr
-# - Pr
-# - zp
-# - H
+# - Mw: Low Frequency Mean
+# - Pw: Low Frequency Power
+# - Mr: High Frequency Rectified Mean
+# - Pr: High Frequency Rectified Power
+# - zp: High Frequency Zero Crossing Rate
+# - H: Hilbert Transform
 
 # In paper: ['Wm','Pw','Pr','zp','Mr']
 FEATURE_NAMES = ['Mw','Pw','Pr','zp','Mr']
