@@ -364,7 +364,7 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset
     basename += f"{uttType}"
 
     if subset != 'both':
-        basename += f"_{subset}"
+        basename += f"_{subset}_"
 
     # Load the training datasets
     tableFile = tables.open_file(f"{DIR_PATH}/{basename}Table.h5",mode='r')

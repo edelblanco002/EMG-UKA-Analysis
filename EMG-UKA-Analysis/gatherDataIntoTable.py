@@ -153,6 +153,8 @@ def main(uttType,subset='both',speaker='all',session='all',analyzeMFFCs=False):
 
     filename += 'Table'
 
+    print(f"Building {filename}...")
+
     if analyzeMFFCs:
         buildMFCCTable(files,filename,uttType)
     else:

@@ -7,12 +7,22 @@ REMOVE_SILENCES = True
 
 CORPUS = "EMG-UKA" # "Pilot Study" or "EMG-UKA"
 
-FEATURE_NAMES = ["w","Pw","Pr","z","r"]
+# Features:
+# - Mw:
+# - Pw
+# - Mr
+# - Pr
+# - zp
+# - H
+
+# In paper: ['Wm','Pw','Pr','zp','Mr']
+FEATURE_NAMES = ['Mw','Pw','Pr','zp','Mr']
+
+N_FEATURES = len(FEATURE_NAMES) # Number of calculated features
 N_CHANNELS = 6 # Number of channels (whitout the syncronization channel)
 N_BATCHES = 1
-STACKING_WIDTH = 15
+STACKING_WIDTH = 10
 
-N_FEATURES = len(FEATURE_NAMES)
 ROW_SIZE = N_CHANNELS*N_FEATURES*(STACKING_WIDTH*2 + 1) + 1
 
 #########################

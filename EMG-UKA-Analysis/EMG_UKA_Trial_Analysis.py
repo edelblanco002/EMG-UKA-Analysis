@@ -5,7 +5,7 @@ from featureSelectionProbe import Probe
 import telegramNotification
 import traceback
 
-experimentName = 'Session-Ind-Speaker-Dep_SelectKBest_100_Bagging_100_50'
+experimentName = 'MFCCS_Session-Speaker-Ind-Thesis'
 
 # Available reduction methods: 'SelectKBest', 'LDAReduction'
 # Available scoreFunction (only for 'SelectKBest'): 'f_classif', 'mutual_into_classif'
@@ -48,36 +48,66 @@ for speaker, session in speakersAndSessions:
 
 set = dict()
 set['002'] = ['001','003','101']
+set['004'] = ['001']
+set['006'] = ['001']
 set['008'] = [str(i).zfill(3) for i in range(1,9)]
 
 probes = []
 
-for speaker in set.keys():
-    speaker = speaker
-    sessions = set[speaker]
+"""for currentSpeaker in set.keys():
+    sessions = set[currentSpeaker]
 
     for currentSession in sessions:
         trainSessions = ()
         for session in sessions:
             if session != currentSession:
-                trainSessions += ( session + '-all',)
-        testSession = currentSession + '-all'
-        print(f"Speaker: {speaker}; Train sessions: {trainSessions}; Test session: {testSession}")
+                trainSessions += (session + '-all', )
+        
         probes.append(
             Probe(
                 uttType='audible',
                 analyzedLabels='simple',
-                trainSpeaker=speaker,
-                testSpeaker=speaker,
+                trainSpeaker=currentSpeaker,
+                testSpeaker=currentSpeaker,
                 trainSession=trainSessions,
+                testSession=currentSession,
+                reductionMethod = 'LDAReduction',
+                #scoreFunction='f_classif',
+                n_features = 12,
+                classificationMethod = 'GMMmodels',
+                #min_samples_leaf=50,
+                #n_estimators=100,
+                analyzeMFCCs=True
+            )
+        )"""
+
+
+for currentSpeaker in set.keys():
+    sessions = set[currentSpeaker]
+
+    trainSpeakers = ()
+
+    for speaker in set.keys():
+        if speaker != currentSpeaker:
+            trainSpeakers += (speaker + '-all',)
+
+    for session in sessions:
+        testSession = session + '-all'
+        probes.append(
+            Probe(
+                uttType='audible',
+                analyzedLabels='simple',
+                trainSpeaker=trainSpeakers,
+                testSpeaker=currentSpeaker,
+                trainSession='all',
                 testSession=testSession,
-                reductionMethod = 'SelectKBest',
-                scoreFunction='f_classif',
-                n_features = 100,
-                classificationMethod = 'bagging',
-                min_samples_leaf=50,
-                n_estimators=100,
-                analyzeMFCCs=False
+                reductionMethod = 'LDAReduction',
+                #scoreFunction='f_classif',
+                n_features = 12,
+                classificationMethod = 'GMMmodels',
+                #min_samples_leaf=50,
+                #n_estimators=100,
+                analyzeMFCCs=True
             )
         )
 
