@@ -1,8 +1,130 @@
 from bar import printProgressBar
 from globalVars import CORPUS, DIR_PATH, N_CHANNELS, MFCC_ROW_SIZE, ROW_SIZE
+from globalVars import HILBERT_ROW_SIZE, HILBERT_FS, FRAME_SHIFT
+import math
 import numpy as np
 import os
 import tables
+
+def buildEMGHilbertTable(utteranceFiles,tableFileName='table',uttType='audible'):
+    # This function reads the data from all files in the utteranceFiles list
+    # and writes all together into a HDF5 file
+
+    tableFile = tables.open_file(f"{DIR_PATH}/{tableFileName}.h5",mode='w', title="Features from audible utterances")
+    atom = tables.Float32Atom()
+    
+    # Create the array_c to write into the HDF5 file. Each example is appended as a new row
+    array_c = tableFile.create_earray(tableFile.root, 'data', atom, (0, ROW_SIZE + N_CHANNELS*(HILBERT_ROW_SIZE - 1))) # -1 because labels are already considered in the features matrix
+    
+    i = 0
+    printProgressBar(i, len(utteranceFiles), prefix = 'Progress:', suffix = f'{i}/{len(utteranceFiles)}', length = 50)
+    for utteranceFile in utteranceFiles:
+        utteranceFile = utteranceFile.replace('emg_','')
+        speaker, session, utt = utteranceFile.split('-')
+
+        if CORPUS == "EMG-UKA":
+            featuresFile = open(f"{DIR_PATH}/features/{speaker}/{session}/e{str(N_CHANNELS+1).zfill(2)}_{speaker}_{session}_{utt}.npy",'rb')
+            hilbertFile = open(f"{DIR_PATH}/hilbert/{speaker}/{session}/e{str(N_CHANNELS+1).zfill(2)}_{speaker}_{session}_{utt}.npy",'rb')
+
+        elif CORPUS == "Pilot Study":
+            round = session[-1]
+            featuresFile = open(f"{DIR_PATH}/features/{speaker}/{session}/emg_{str(N_CHANNELS+1).zfill(2)}ch_{speaker}_{uttType}{round}_{utt}.npy",'rb')
+            hilbertFile = open(f"{DIR_PATH}/hilbert/{speaker}/{session}/emg_{str(N_CHANNELS+1).zfill(2)}ch_{speaker}_{uttType}{round}_{utt}.npy",'rb')
+        else:
+            print("The CORPUS parameter is wrong defined in the globalVars.py file")
+            raise ValueError
+
+        auxFeaturesMat = np.load(featuresFile)
+        auxHilbertMat = np.load(hilbertFile)
+        featuresFile.close()
+        hilbertFile.close()
+    
+        # Remove labels from hilbert matrice
+        auxHilbertMat = auxHilbertMat[:,:,1:]
+        # Stack the hilberd transformed signals corresponding to each channels [ch1, ch2, ch3...]
+        auxHilbertMat = auxHilbertMat.reshape(-1,N_CHANNELS*(HILBERT_ROW_SIZE - 1))
+        # If the step took for the window to extract the Hilbert transform was less than 1, it has been rounded to 1
+        # This means that the number of frames obtained has been less than the needed
+        # Frames should be duplicated to match the number of frames used in features
+        if (HILBERT_FS*FRAME_SHIFT) < 1:
+            auxHilbertMat = np.repeat(auxHilbertMat,math.ceil(1/(HILBERT_FS*FRAME_SHIFT)),axis=0)
+
+        nFramesHilbert = np.shape(auxHilbertMat)[0]
+        nFramesFeatures = np.shape(auxFeaturesMat)[0]
+
+        if nFramesFeatures > nFramesHilbert:
+            print('Warning: Number of frames for Hilbert transform is fewer than for emg features.')
+            raise Exception
+
+        while nFramesHilbert > nFramesFeatures:
+            auxHilbertMat = np.delete(auxHilbertMat,-1,axis=0)
+            nFramesHilbert = np.shape(auxHilbertMat)[0]
+
+        # Join features and Hilbert into one single matrix
+        nFrames = np.shape(auxFeaturesMat)[0]
+        auxMat = np.zeros((nFrames,ROW_SIZE + N_CHANNELS*(HILBERT_ROW_SIZE - 1)))
+        auxMat[:,0:ROW_SIZE] = auxFeaturesMat[:]
+        auxMat[:,ROW_SIZE:] = auxHilbertMat[:]
+
+
+        for idx in range(np.shape(auxMat)[0]):
+            try:
+                array_c.append([auxMat[idx]])
+            except:
+                tableFile.close()
+                raise Exception
+    
+        i += 1
+        printProgressBar(i, len(utteranceFiles), prefix = 'Progress:', suffix = f'{i}/{len(utteranceFiles)}', length = 50)
+    
+    del auxMat
+    tableFile.close()
+
+    return
+
+def buildHilbertTable(utteranceFiles,tableFileName='table',uttType='audible'):
+    # This function reads the data from all files in the utteranceFiles list
+    # and writes all together into a HDF5 file
+
+    tableFile = tables.open_file(f"{DIR_PATH}/{tableFileName}.h5",mode='w', title="Features from audible utterances")
+    atom = tables.Float32Atom()
+    
+    # Create the array_c to write into the HDF5 file. Each example is appended as a new row
+    array_c = tableFile.create_earray(tableFile.root, 'data', atom, (0, N_CHANNELS, HILBERT_ROW_SIZE))
+    
+    i = 0
+    printProgressBar(i, len(utteranceFiles), prefix = 'Progress:', suffix = f'{i}/{len(utteranceFiles)}', length = 50)
+    for utteranceFile in utteranceFiles:
+        utteranceFile = utteranceFile.replace('emg_','')
+        speaker, session, utt = utteranceFile.split('-')
+
+        if CORPUS == "EMG-UKA":
+            file = open(f"{DIR_PATH}/hilbert/{speaker}/{session}/e{str(N_CHANNELS+1).zfill(2)}_{speaker}_{session}_{utt}.npy",'rb')
+
+        elif CORPUS == "Pilot Study":
+            round = session[-1]
+            file = open(f"{DIR_PATH}/hilbert/{speaker}/{session}/emg_{str(N_CHANNELS+1).zfill(2)}ch_{speaker}_{uttType}{round}_{utt}.npy",'rb')
+        else:
+            print("The CORPUS parameter is wrong defined in the globalVars.py file")
+            raise ValueError
+
+        auxMat = np.load(file)
+        file.close()
+    
+        for idx in range(np.shape(auxMat)[0]):
+            try:
+                array_c.append([auxMat[idx]])
+            except:
+                tableFile.close()
+                raise Exception
+    
+        i += 1
+        printProgressBar(i, len(utteranceFiles), prefix = 'Progress:', suffix = f'{i}/{len(utteranceFiles)}', length = 50)
+    
+    del auxMat
+    tableFile.close()
+
+    return
 
 def buildMFCCTable(utteranceFiles,tableFileName='table',uttType='audible'):
     # This function reads the data from all files in the utteranceFiles list
@@ -27,7 +149,7 @@ def buildMFCCTable(utteranceFiles,tableFileName='table',uttType='audible'):
             round = session[-1]
             file = open(f"{DIR_PATH}/mfccs/{speaker}/{session}/a_{speaker}_{uttType}{round}_{utt}.npy",'rb')
         else:
-            print("The CORPUS parameter is bat defined in the globalVars.py file")
+            print("The CORPUS parameter is wrong defined in the globalVars.py file")
             raise ValueError
 
         auxMat = np.load(file)
@@ -67,7 +189,7 @@ def buildTable(utteranceFiles,tableFileName='table',uttType='audible'):
             round = session[-1]
             file = open(f"{DIR_PATH}/features/{speaker}/{session}/emg_{str(N_CHANNELS+1).zfill(2)}ch_{speaker}_{uttType}{round}_{utt}.npy",'rb')
         else:
-            print("The CORPUS parameter is bat defined in the globalVars.py file")
+            print("The CORPUS parameter is wrong defined in the globalVars.py file")
             raise ValueError
 
         auxMat = np.load(file)
@@ -134,7 +256,7 @@ def removeTables():
         os.remove(filePath)
 
 
-def main(uttType,subset='both',speaker='all',session='all',analyzeMFFCs=False):        
+def main(uttType,subset='both',speaker='all',session='all',analyzedData='emg'):        
 
     files = getFilesList(uttType,subset,speaker=speaker,session=session)
 
@@ -155,11 +277,14 @@ def main(uttType,subset='both',speaker='all',session='all',analyzeMFFCs=False):
 
     print(f"Building {filename}...")
 
-    if analyzeMFFCs:
+    if analyzedData == 'MFCCs':
         buildMFCCTable(files,filename,uttType)
-    else:
+    elif analyzedData == 'emg':
         buildTable(files,filename,uttType)
-
+    elif analyzedData == 'hilbert':
+        buildHilbertTable(files,filename,uttType)
+    elif analyzedData == 'emg-hilbert':
+        buildEMGHilbertTable(files,filename,uttType)
 
 if __name__ == '__main__':
     main()

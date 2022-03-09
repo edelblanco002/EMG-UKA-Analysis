@@ -15,7 +15,7 @@ import time
 import uuid
 
 class Probe:
-    def __init__(self,reductionMethod='',n_features=0,classificationMethod='',scoreFunction='',n_estimators=0,min_samples_leaf=0,speaker='all',session='all',trainSpeaker='',trainSession='',testSpeaker='',testSession='',uttType='audible',analyzedLabels='simple', useChannels=[], analyzeMFCCs=False):
+    def __init__(self,reductionMethod='',n_features=0,classificationMethod='',scoreFunction='',n_estimators=0,min_samples_leaf=0,speaker='all',session='all',trainSpeaker='',trainSession='',testSpeaker='',testSession='',uttType='audible',analyzedLabels='simple', useChannels=[], analyzedData='emg'):
         self.name = uuid.uuid4().hex[:8]
 
         # Validation rules
@@ -24,6 +24,7 @@ class Probe:
         allowedScoreFunctions = ['f_classif','mutual_info_classif']
         allowedUtteranceTypes = ['audible','whispered','silent']
         allowedAnalyzedLabels = ['simple','transitions','all']
+        allowedAnalyzedData = ['emg','MFCCs','hilbert','emg-hilbert']
 
         self.validateSpeakerAndSession(speaker, session, trainSpeaker, trainSession, testSpeaker, testSession)
 
@@ -37,7 +38,17 @@ class Probe:
 
         self.validateUseChannels(useChannels)
 
-        self.analyzeMFCCs = analyzeMFCCs
+        self.validateAnalyzedData(analyzedData,allowedAnalyzedData)
+
+    def validateAnalyzedData(self,analyzedData,allowedAnalyzedData):
+        # Validation of analyzed data type
+        if not analyzedData in allowedAnalyzedData:
+            print("The allowed values for 'analyzedData' are the following ones:")
+            for element in allowedAnalyzedData:
+                print(f"- {element}")
+            raise ValueError
+        else:
+            self.analyzedData = analyzedData
 
     def validateReductionMethod(self, reductionMethod, n_features, scoreFunction, allowedReductionMethods, allowedScoreFunctions):
         # Validation of the reduction method
@@ -342,7 +353,7 @@ def getUniqueLabels(list1):
 
     return sorted(unique_list)
 
-def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFFCs):
+def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData):
     # If speaker or session have been marked with '-all' in order to use both train and test subsets,
     # then remove the '-all' mark
     if speaker.endswith('-all'):
@@ -350,7 +361,7 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset
     if session.endswith('-all'):
         session = session[:-4]
 
-    gatherDataIntoTable.main(uttType,subset=subset,speaker=speaker,session=session,analyzeMFFCs=analyzeMFFCs)
+    gatherDataIntoTable.main(uttType,subset=subset,speaker=speaker,session=session,analyzedData=analyzedData)
             
     # If the probes are done with a specific speaker and session, build the name of the file where it is saved.
     basename = ""
@@ -373,6 +384,20 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset
     batch = table[:]
 
     tableFile.close()
+
+    # If the loaded data is the hilbert transform, each frame contains the data of all the cannels separated
+    # If we want to analyze this data with classifiers different from RNNs, they must be reshaped and put into a sigle row
+    if analyzedData == 'hilbert':
+        lb = batch[:,0,0] # Takes the labels from the first channel of each frame (all channels have same labels)
+        ft = batch[:,:,1:] # Takes the features
+        framesNumber = np.shape(batch)[0]
+        rowSize = np.shape(batch)[1]*(np.shape(batch)[2]-1)
+        ft = ft.reshape(framesNumber,rowSize) # And reshapes the data so that, for each frame, data from channels is stacked [ch1, ch2, ch3...]
+        # Create a new batch with reshaped data
+        del batch
+        batch = np.zeros((framesNumber,rowSize+1))
+        batch[:,0] = lb # Set labels to the first column of the new batch
+        batch[:,1:] = ft # And features to the remaining columns
 
     # Remove examples with any NaN in their features
     batch = datasetManipulation.removeNaN(batch)[0]
@@ -403,26 +428,26 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset
     labels = batch[:,0]
     return features, labels
 
-def loadMultipleData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFFCs):
+def loadMultipleData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData):
     if (type(speaker) is tuple):
         if session != 'all':
             print(f"ERROR: If you are selecting multiple speakers for {subset}ing, you must select all sessions.")
             raise ValueError
         else:
-            features, labels = loadMultipleSpeakers(speaker,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFFCs)
+            features, labels = loadMultipleSpeakers(speaker,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData)
     else: # If speaker is not a tuple, then session must be a tuple
-        features, labels = loadMultipleSessions(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFFCs)
+        features, labels = loadMultipleSessions(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData)
 
     return features, labels
 
-def loadMultipleSessions(speaker,sessions,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFCCs):
+def loadMultipleSessions(speaker,sessions,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData):
     currentSession: str
     for currentSession in sessions:
         # Load features and labels from current session
         if not currentSession.endswith('-all'):
-            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFCCs)
+            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData)
         else:
-            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,phoneDict,'both',analyzeMFCCs)
+            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,phoneDict,'both',analyzedData)
         # Add it to the output
         if currentSession == sessions[0]: # If it's the first session, just copy the matrix to the output
             features = currentFeatures[:]
@@ -433,14 +458,14 @@ def loadMultipleSessions(speaker,sessions,uttType,analyzedLabels,useChannels,pho
 
     return features, labels
 
-def loadMultipleSpeakers(speakers,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFCCs):
+def loadMultipleSpeakers(speakers,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData):
     currentSpeaker: str
     for currentSpeaker in speakers:
         # Load data for current speaker
         if not currentSpeaker.endswith('-all'):
-            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,phoneDict,subset,analyzeMFCCs)
+            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData)
         else:
-            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,phoneDict,'both',analyzeMFCCs)
+            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,phoneDict,'both',analyzedData)
     
         # Add it to the output
         if currentSpeaker == speakers[0]: # If it's the first speaker, just copy loaded data to the output
@@ -539,11 +564,11 @@ def main(experimentName='default',probes=[]):
         if trainingBatchHasChanged:
             if (type(probe.trainSpeaker) is str) and (type(probe.trainSession) is str):
                 if (not probe.trainSpeaker.endswith('-all')) and (not probe.trainSession.endswith('-all')):
-                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'train',probe.analyzeMFCCs)
+                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'train',probe.analyzedData)
                 else:
-                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'both',probe.analyzeMFCCs)
+                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'both',probe.analyzedData)
             elif (type(probe.trainSpeaker) is tuple) or (type(probe.trainSession) is tuple):
-                trainFeatures, trainLabels = loadMultipleData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'train',probe.analyzeMFCCs)
+                trainFeatures, trainLabels = loadMultipleData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'train',probe.analyzedData)
             else:
                 print(f'ERROR: Wrong type for trainSpeaker ({probe.trainSpeaker}) or trainSession ({probe.trainSession})')
                 raise ValueError
@@ -551,11 +576,11 @@ def main(experimentName='default',probes=[]):
         if testingBatchHasChanged:
             if (type(probe.testSpeaker) is str) and (type(probe.testSession) is str):
                 if not probe.testSpeaker.endswith('-all') and not probe.testSession.endswith('-all'):
-                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'test',probe.analyzeMFCCs)
+                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'test',probe.analyzedData)
                 else:
-                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'both',probe.analyzeMFCCs)
+                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'both',probe.analyzedData)
             elif (type(probe.testSpeaker) is tuple) or (type(probe.testSession) is tuple):
-                testFeatures, testLabels = loadMultipleData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'test',probe.analyzeMFCCs)
+                testFeatures, testLabels = loadMultipleData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'test',probe.analyzedData)
             else:
                 print(f'ERROR: Wrong type for testSpeaker ({probe.testSpeaker}) or testSession ({probe.testSession})')
                 raise ValueError

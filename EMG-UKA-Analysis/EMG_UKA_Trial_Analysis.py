@@ -5,13 +5,13 @@ from featureSelectionProbe import Probe
 import telegramNotification
 import traceback
 
-experimentName = 'MFCCS_Session-Speaker-Ind-Thesis'
+experimentName = 'EMG-Hilbert_Speaker-Session-Dep_Paper-configuration'
 
 # Available reduction methods: 'SelectKBest', 'LDAReduction'
 # Available scoreFunction (only for 'SelectKBest'): 'f_classif', 'mutual_into_classif'
 # Available classificationMethods = 'GMMmodels', 'bagging'
 
-""" speakersAndSessions = [
+speakersAndSessions = [
     ('002','001'),
     ('002','003'),
     ('002','101'),
@@ -34,25 +34,23 @@ for speaker, session in speakersAndSessions:
         Probe(
             uttType='audible',
             analyzedLabels='simple',
-            trainSpeaker=speaker,
-            trainSession=all,
-            testSpeaker=speaker,
-            testSession=all,
+            speaker=speaker,
+            session=session,
             reductionMethod = 'LDAReduction',
             n_features = 32,
-            classificationMethod = 'GMMmodels',
-            analyzeMFCCs=True
+            classificationMethod = 'GMMmodels',            
+            analyzedData='emg-hilbert'
         )
     )
- """
 
-set = dict()
+
+"""set = dict()
 set['002'] = ['001','003','101']
 set['004'] = ['001']
 set['006'] = ['001']
 set['008'] = [str(i).zfill(3) for i in range(1,9)]
 
-probes = []
+probes = []"""
 
 """for currentSpeaker in set.keys():
     sessions = set[currentSpeaker]
@@ -82,7 +80,7 @@ probes = []
         )"""
 
 
-for currentSpeaker in set.keys():
+"""for currentSpeaker in set.keys():
     sessions = set[currentSpeaker]
 
     trainSpeakers = ()
@@ -109,7 +107,7 @@ for currentSpeaker in set.keys():
                 #n_estimators=100,
                 analyzeMFCCs=True
             )
-        )
+        )"""
 
 try:
     featureSelectionProbe.main(experimentName,probes)
