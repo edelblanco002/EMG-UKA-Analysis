@@ -11,18 +11,19 @@ import traceback
 # Available classificationMethods = 'GMMmodels', 'bagging'
 
 speakersAndSessions = {}
-speakersAndSessions['002'] = ['001','003','101']
-speakersAndSessions['004'] = ['001']
-speakersAndSessions['006'] = ['001']
-speakersAndSessions['008'] = [str(i).zfill(3) for i in range(1,9)]
+speakersAndSessions['002'] = ['001']
+#speakersAndSessions['002'] = ['001','003','101']
+#speakersAndSessions['004'] = ['001']
+#speakersAndSessions['006'] = ['001']
+#speakersAndSessions['008'] = [str(i).zfill(3) for i in range(1,9)]
 
-experimentName = 'SpeakerSessionDependent_LDA32_Bagging_50_100_crossValidation'
+experimentName = 'Prueba'
 
 referenceProbe = Probe(
     uttType='audible',
     analyzedLabels='simple',
     reductionMethod = 'LDAReduction',
-    classificationMethod = 'bagging',
+    classificationMethod = 'GMMmodels',
     n_features=32,
     n_estimators=100,
     min_samples_leaf=50,

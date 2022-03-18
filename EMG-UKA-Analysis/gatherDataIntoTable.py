@@ -181,7 +181,7 @@ def buildTable(utteranceFiles,tableFileName='table',uttType='audible'):
     atom = tables.Float32Atom()
     
     # Create the array_c to write into the HDF5 file. Each example is appended as a new row
-    array_c = tableFile.create_earray(tableFile.root, 'data', atom, (0, ROW_SIZE))
+    array_c = tableFile.create_earray(tableFile.root, 'data', atom, (0, 1 + ROW_SIZE))
     
     i = 0
     printProgressBar(i, len(utteranceFiles), prefix = 'Progress:', suffix = f'{i}/{len(utteranceFiles)}', length = 50)
@@ -201,7 +201,13 @@ def buildTable(utteranceFiles,tableFileName='table',uttType='audible'):
 
         auxMat = np.load(file)
         file.close()
-    
+
+        # Create a column with a number to identify to with utterances belong the set of frames
+        # And append it as the first column of the matrix
+        nFrames = np.shape(auxMat)[0]
+        fileLabel = np.ones((nFrames,1))*i
+        auxMat = np.hstack((fileLabel,auxMat))
+
         for idx in range(np.shape(auxMat)[0]):
             array_c.append([auxMat[idx]])
     

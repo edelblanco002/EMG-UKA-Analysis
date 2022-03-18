@@ -3,6 +3,8 @@ import telegram
 def sendTelegram(text):
     # This function sends a telegram message
 
+    #return
+
     bot = telegram.Bot(token='1936767568:AAGRCyoOJwcy6rOOZJ1Ol5sxUYZz0vSwL4Q')
 
     if len(text) > 4096:

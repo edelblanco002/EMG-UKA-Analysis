@@ -28,6 +28,19 @@ def getPhoneDict():
 
     return phoneDict
 
+def mergeDataset(uttFeatures,uttLabels):
+    # This function takes the features from all the utterances and puts them together into a single ndarray
+
+    features = uttFeatures[0]
+    labels = uttLabels[0]
+
+    if len(uttLabels) > 1: # If there is one single utterance (rare case), there are not more utterances to stack
+        for i in range(1, len(uttLabels)):
+            features = np.concatenate((features, uttFeatures[i]), axis=0)
+            labels = np.concatenate((labels, uttLabels[i]), axis=0)
+
+    return features, labels
+
 def removeNaN(batch):
     # This function removes the examples that contains any NaN value in its features
 

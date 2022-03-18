@@ -1,57 +1,105 @@
+from datasetManipulation import mergeDataset
 import numpy as np
 from sklearn.mixture import GaussianMixture as GMM
 from sklearn.model_selection import train_test_split
 
-def crossValidationBaggingClassifier(trainFeatures, trainLabels,n_estimators=10, min_samples_leaf=10, kFolds=9):
+def crossValidationBaggingClassifier(trainFeatures, trainLabels, uniqueLabels, n_estimators=10, min_samples_leaf=10, kFolds=5):
     from sklearn.tree import DecisionTreeClassifier
     from sklearn.ensemble import BaggingClassifier
-    from sklearn.model_selection import cross_val_score
-
-    clf = BaggingClassifier(base_estimator=DecisionTreeClassifier(random_state=43, min_samples_leaf=min_samples_leaf),n_estimators=n_estimators,random_state=0)
-    scores = cross_val_score(clf, trainFeatures, trainLabels, cv=kFolds)
-
-    accuracy = sum(scores)/len(scores)
-
-    return accuracy
-
-def crossValidationGMM(trainFeatures, trainLabels, uniqueLabels, kFolds=9):
     from sklearn.model_selection import KFold
 
     kf = KFold(n_splits=kFolds)
 
-    scores = []
+    score = 0.0
+    nLabels = len(uniqueLabels)
+    confusionMatrix = np.zeros((nLabels,nLabels))
 
     for trainIdx, testIdx in kf.split(trainFeatures):
-        xTrain, xTest = trainFeatures[trainIdx], trainFeatures[testIdx]
-        yTrain, yTest = trainLabels[trainIdx], trainLabels[testIdx]
-        clf = trainGMMmodels(xTrain, yTrain, uniqueLabels)
-        actualScore, _ = testGMMmodels(clf, xTest, yTest, uniqueLabels)
-        scores.append(actualScore)
+        trainFeaturesSubset = []
+        trainLabelsSubset = []
+        testFeaturesSubset = []
+        testLabelsSubset = []
+        
+        for idx in trainIdx:
+            trainFeaturesSubset.append(trainFeatures[idx])
+            trainLabelsSubset.append(trainLabels[idx])
+        for idx in testIdx:
+            testFeaturesSubset.append(trainFeatures[idx])
+            testLabelsSubset.append(trainLabels[idx])
 
-    averagedScore = sum(scores)/len(scores)
+        clf = trainBaggingClassifier(trainFeaturesSubset, trainLabelsSubset,n_estimators=10, min_samples_leaf=10)
+        actualScore, actualConfusionMatrix= testClassifier(clf, testFeaturesSubset, testLabelsSubset, uniqueLabels)
+        score += actualScore
+        confusionMatrix += actualConfusionMatrix
 
-    return averagedScore
+    accuracy = score/kFolds
 
-def crossValidationNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch_size, n_epochs):
+    return accuracy, confusionMatrix
+
+def crossValidationGMM(trainFeatures, trainLabels, uniqueLabels, kFolds=5):
     from sklearn.model_selection import KFold
 
     kf = KFold(n_splits=kFolds)
 
-    scores = []
-
+    score = 0.0
+    nLabels = len(uniqueLabels)
+    confusionMatrix = np.zeros((nLabels,nLabels))
     for trainIdx, testIdx in kf.split(trainFeatures):
-        xTrain, xTest = trainFeatures[trainIdx], trainFeatures[testIdx]
-        yTrain, yTest = trainLabels[trainIdx], trainLabels[testIdx]
-        clf = trainNeuralNetwork(trainFeatures, xTrain, yTrain, batch_size, n_epochs)
-        actualScore, _ = testNeuralNetwork(clf, xTest, yTest, uniqueLabels, batch_size)
-        scores.append(actualScore)
+        trainFeaturesSubset = []
+        trainLabelsSubset = []
+        testFeaturesSubset = []
+        testLabelsSubset = []
+        
+        for idx in trainIdx:
+            trainFeaturesSubset.append(trainFeatures[idx])
+            trainLabelsSubset.append(trainLabels[idx])
+        for idx in testIdx:
+            testFeaturesSubset.append(trainFeatures[idx])
+            testLabelsSubset.append(trainLabels[idx])
 
-    averagedScore = sum(scores)/len(scores)
+        clf = trainGMMmodels(trainFeaturesSubset, trainLabelsSubset, uniqueLabels)
+        actualScore, actualConfusionMatrix = testGMMmodels(clf, testFeaturesSubset, testLabelsSubset, uniqueLabels)
+        score += actualScore
+        confusionMatrix += actualConfusionMatrix
 
-    return averagedScore
+    averagedScore = score/kFolds
 
-def testClassifier(clf, testFeatures, testLabels, uniqueLabels):
+    return averagedScore, confusionMatrix
+
+def crossValidationNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch_size, n_epochs, kFolds=5):
+    from sklearn.model_selection import KFold
+
+    kf = KFold(n_splits=kFolds)
+
+    score = 0.0
+    nLabels = len(uniqueLabels)
+    confusionMatrix = np.zeros((nLabels,nLabels))
+    for trainIdx, testIdx in kf.split(trainFeatures):
+        trainFeaturesSubset = []
+        trainLabelsSubset = []
+        testFeaturesSubset = []
+        testLabelsSubset = []
+        
+        for idx in trainIdx:
+            trainFeaturesSubset.append(trainFeatures[idx])
+            trainLabelsSubset.append(trainLabels[idx])
+        for idx in testIdx:
+            testFeaturesSubset.append(trainFeatures[idx])
+            testLabelsSubset.append(trainLabels[idx])
+
+        clf = trainNeuralNetwork(trainFeatures, trainFeaturesSubset, trainLabelsSubset, batch_size, n_epochs)
+        actualScore, actualConfusionMatrix = testNeuralNetwork(clf, testFeaturesSubset, testLabelsSubset, uniqueLabels, batch_size)
+        score += actualScore
+        confusionMatrix += actualConfusionMatrix
+
+    averagedScore = score/kFolds
+
+    return averagedScore, confusionMatrix
+
+def testClassifier(clf, uttTestFeatures, uttTestLabels, uniqueLabels):
     # This function calculates the accuracy and saves the confusion matrix of the classification obtained with the given classifier
+
+    testFeatures, testLabels = mergeDataset(uttTestFeatures, uttTestLabels)
 
     nSamples = len(testLabels)
     nLabels = len(uniqueLabels)
@@ -79,8 +127,10 @@ def testClassifier(clf, testFeatures, testLabels, uniqueLabels):
 
     return score, confusionMatrix
 
-def testGMMmodels(models, testFeatures, testLabels, uniqueLabels):
+def testGMMmodels(models, uttTestFeatures, uttTestLabels, uniqueLabels):
     # This function calculates the accuracy and saves the confusion matrix of the model
+
+    testFeatures, testLabels = mergeDataset(uttTestFeatures,uttTestLabels)
 
     predictedLabels = []
 
@@ -120,17 +170,21 @@ def testGMMmodels(models, testFeatures, testLabels, uniqueLabels):
 
     return score, confusionMatrix
 
-def trainBaggingClassifier(trainFeatures, trainLabels,n_estimators=10, min_samples_leaf=10):
+def trainBaggingClassifier(uttTrainFeatures, uttTrainLabels,n_estimators=10, min_samples_leaf=10):
     from sklearn.tree import DecisionTreeClassifier
     from sklearn.ensemble import BaggingClassifier
+
+    trainFeatures, trainLabels = mergeDataset(uttTrainFeatures,uttTrainLabels)
 
     clf = BaggingClassifier(base_estimator=DecisionTreeClassifier(random_state=43, min_samples_leaf=min_samples_leaf),n_estimators=n_estimators,random_state=0).fit(trainFeatures, trainLabels)
 
     return clf
 
-def trainGMMmodels(trainFeatures, trainLabels, uniqueLabels):
+def trainGMMmodels(uttTrainFeatures, uttTrainLabels, uniqueLabels):
     # This function trains many GMM models for each label and saves the one that minimizes the Bayesian Information Criterion.
     # It returns the optimal GMM model for each feature into a dictionary, whose keys are the label
+
+    trainFeatures, trainLabels = mergeDataset(uttTrainFeatures,uttTrainLabels)
 
     max_components = 21
     
@@ -168,25 +222,42 @@ def trainNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch_size, n_e
     from keras.callbacks import EarlyStopping
     from keras.models import Sequential
     from keras.layers import Dense
+    import random
     import pandas as pd
-    
 
-    print(f"len(trainLabels): {len(trainLabels)}")
+    lenValidationSubset = round(len(trainFeatures)*0.2) # The number of utterances we want to use as validation subset
 
-    trainFeatures, validationFeatures, trainLabels, validationLabels = train_test_split(trainFeatures, trainLabels, test_size=0.33, random_state=42)
+    # Select randomly the same subset of utterances as validation subset
+    # Get the indexes of the utterances that will be into the validation subset
+    random.seed(20)
+    validationIdx = random.sample([x for x in range(0,len(trainLabels))], lenValidationSubset)
 
-    print(f"len(trainLabels): {len(trainLabels)}")
-    print(f"len(validationLabels): {len(validationLabels)}")
+    # Divide the utterances between training subset and validation subset
+    trainFeaturesSubset = []
+    trainLabelsSubset = []
+    valFeaturesSubset = []
+    valLabelsSubset = []
+    for i in range(0,len(trainLabels)):
+        if i in validationIdx:
+            valFeaturesSubset.append(trainFeatures[i])
+            valLabelsSubset.append(trainLabels[i])
+        else:
+            trainFeaturesSubset.append(trainFeatures[i])
+            trainLabelsSubset.append(trainLabels[i])
 
-    trainLabels = pd.get_dummies(trainLabels)
-    validationLabels = pd.get_dummies(validationLabels)
+    # Merge features into batches
+    trainFeaturesBatch, trainLabelsBatch = mergeDataset(trainFeaturesSubset,trainLabelsSubset)
+    valFeaturesBatch, valLabelsBatch = mergeDataset(valFeaturesSubset,valLabelsSubset)
+
+    trainLabelsBatch = pd.get_dummies(trainLabelsBatch)
+    valLabelsBatch = pd.get_dummies(valLabelsBatch)
     print(len(uniqueLabels))
     
 
     # define the keras model
     model = Sequential()
     #model.add(Dense(len(trainFeatures[0])*2, input_dim=len(trainFeatures[0]), activation='relu'))
-    model.add(Dense(32, input_dim=len(trainFeatures[0]), activation='relu'))
+    model.add(Dense(32, input_dim=len(trainFeaturesBatch[0]), activation='relu'))
     model.add(Dense(len(uniqueLabels), activation='softmax'))
     
     # compile the keras model
@@ -195,14 +266,15 @@ def trainNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch_size, n_e
     early_stopping = EarlyStopping(patience=10)
 
     # fit the keras model on the dataset
-    model.fit(trainFeatures, trainLabels, validation_data=(validationFeatures, validationLabels), epochs=n_epochs, batch_size=batch_size, callbacks=[early_stopping])
+    model.fit(trainFeaturesBatch, trainLabelsBatch, validation_data=(valFeaturesBatch, valLabelsBatch), epochs=n_epochs, batch_size=batch_size, callbacks=[early_stopping])
     
     return model
 
-def testNeuralNetwork(clf, testFeatures, testLabels, uniqueLabels, batch_size):
+def testNeuralNetwork(clf, uttTestFeatures, uttTestLabels, uniqueLabels, batch_size):
     import pandas as pd
     import numpy as np
     
+    testFeatures, testLabels = mergeDataset(uttTestFeatures, uttTestLabels)
     
     nSamples = len(testLabels)
     nLabels = len(uniqueLabels)

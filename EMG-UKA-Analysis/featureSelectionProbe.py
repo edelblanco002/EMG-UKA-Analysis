@@ -233,7 +233,7 @@ def speakerDependent_SessionIndependentClassification(dataset: dict,referencePro
                 for session in sessions:
                     if session != currentSession:
                         trainSessions += (session + '-all', )
-                
+
                 probes.append(
                 Probe(
                     reductionMethod = referenceProbe.reductionMethod,
@@ -345,14 +345,14 @@ def selectChannels(features: np.ndarray,useChannels: list):
 
     return outputFeatures
 
-def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, probe: Probe, classifierHasChanged):    
+def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, probe: Probe, classifierHasChanged):
     # This function trains the GMM models and tests them with the train and the test features
 
     t0 = time.time()
 
     if classifierHasChanged:
         if probe.classificationMethod == 'GMMmodels':
-            clf = trainGMMmodels(trainFeatures, trainLabels, uniqueLabels)        
+            clf = trainGMMmodels(trainFeatures, trainLabels, uniqueLabels)
         elif probe.classificationMethod == 'bagging':
             clf = trainBaggingClassifier(trainFeatures, trainLabels, n_estimators=probe.n_estimators, min_samples_leaf=probe.min_samples_leaf)
         elif probe.classificationMethod == 'NN':
@@ -362,14 +362,11 @@ def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels
 
     if classifierHasChanged:
         if probe.classificationMethod == 'GMMmodels':
-            trainScore = crossValidationGMM(trainFeatures, trainLabels, uniqueLabels)
-            _, trainConfusionMatrix = testGMMmodels(clf, trainFeatures, trainLabels,uniqueLabels)
+            trainScore, trainConfusionMatrix = crossValidationGMM(trainFeatures, trainLabels, uniqueLabels)
         elif probe.classificationMethod == 'bagging':
-            trainScore = crossValidationBaggingClassifier(trainFeatures, trainLabels, n_estimators=probe.n_estimators, min_samples_leaf=probe.min_samples_leaf)
-            _, trainConfusionMatrix = testClassifier(clf, trainFeatures, trainLabels, uniqueLabels)
+            trainScore, trainConfusionMatrix = crossValidationBaggingClassifier(trainFeatures, trainLabels, uniqueLabels, n_estimators=probe.n_estimators, min_samples_leaf=probe.min_samples_leaf)
         elif probe.classificationMethod == 'NN':
-            trainScore = crossValidationNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch_size=probe.batch_size, n_epochs=probe.n_epochs)
-            _, trainConfusionMatrix = testNeuralNetwork(clf, trainFeatures, trainLabels,uniqueLabels, batch_size=probe.batch_size)
+            trainScore, trainConfusionMatrix = crossValidationNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch_size=probe.batch_size, n_epochs=probe.n_epochs)
         else:
             trainScore, trainConfusionMatrix = testClassifier(clf, trainFeatures, trainLabels, uniqueLabels)
 
@@ -396,7 +393,7 @@ def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels
     testingTestTime = t3-t2
 
     message = f"""{probe.name} finished.
-    
+
     Accuracy:
     Train: {round(trainScore*100,3)}%
     Test: {round(testScore*100,3)}%
@@ -408,26 +405,26 @@ def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels
     Total elapsed time: {time.strftime("%H:%M:%S", time.gmtime(t3-t0))}"""
 
     telegramNotification.sendTelegram(message) # Report the results on Telegram
-    
+
     # Build table to put the results of the execution into a LaTeX document as a tabular
     message = """\\begin{center}
         \\begin{tabular}{r l}
             \\hline
             \\multicolumn{2}{l}{\\textbf{Accuracy:}} \\\\
             Using train dataset to test: & """
-            
+
     message += f"{round(trainScore*100,3)}"
-    
+
     message += """\\% \\\\
             Using test dataset to test: & """
-            
+
     message += f"{round(testScore*100,3)}"
-    
+
     message += """\\% \\\\
             \\hline
             \\multicolumn{2}{l}{\\textbf{Elapsed time:}} \\\\
             Training: & """
-            
+
     message += f"""{time.strftime("%H hour %M min %S sec", time.gmtime(trainingTime))} \\\\
             Testing with train dataset: & {time.strftime("%H hour %M min %S sec", time.gmtime(testingTrainTime))} \\\\
             Testing with test dataset: & {time.strftime("%H hour %M min %S sec", time.gmtime(testingTestTime))} \\\\
@@ -453,21 +450,24 @@ def getUniqueLabels(list1):
     unique_list = []
 
     # If an only set of labels has been passed as argument
-    if isinstance(list1,np.ndarray):
-        # iterate over all elements
-        for x in list1:
-            # check if exists in unique_list or not
-            if x not in unique_list:
-                unique_list.append(x)
-
-    # If many sets of labels have been pased as argument, as a list: [list1,list2]
-    elif isinstance(list1,list):
-        for labelList in list1:
+    if isinstance(list1[0],np.ndarray):
+        # Iterate over all the utterances into the set
+        for uttLabels in list1:
             # iterate over all elements
-            for x in labelList:
+            for x in uttLabels:
                 # check if exists in unique_list or not
                 if x not in unique_list:
                     unique_list.append(x)
+
+    # If many sets of labels have been pased as argument, as a list: [list1,list2]
+    elif isinstance(list1[0],list):
+        for uttList in list1:
+            for uttLabels in uttList:
+                # iterate over all elements
+                for x in uttLabels:
+                    # check if exists in unique_list or not
+                    if x not in unique_list:
+                        unique_list.append(x)
 
     return sorted(unique_list)
 
@@ -480,7 +480,7 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset
         session = session[:-4]
 
     gatherDataIntoTable.main(uttType,subset=subset,speaker=speaker,session=session,analyzedData=analyzedData)
-            
+
     # If the probes are done with a specific speaker and session, build the name of the file where it is saved.
     basename = ""
 
@@ -499,53 +499,70 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset
     tableFile = tables.open_file(f"{DIR_PATH}/{basename}Table.h5",mode='r')
     table = tableFile.root.data
 
-    batch = table[:]
+    loadedData = table[:]
 
     tableFile.close()
 
-    # If the loaded data is the hilbert transform, each frame contains the data of all the cannels separated
-    # If we want to analyze this data with classifiers different from RNNs, they must be reshaped and put into a sigle row
-    if analyzedData == 'hilbert':
-        lb = batch[:,0,0] # Takes the labels from the first channel of each frame (all channels have same labels)
-        ft = batch[:,:,1:] # Takes the features
-        framesNumber = np.shape(batch)[0]
-        rowSize = np.shape(batch)[1]*(np.shape(batch)[2]-1)
-        ft = ft.reshape(framesNumber,rowSize) # And reshapes the data so that, for each frame, data from channels is stacked [ch1, ch2, ch3...]
-        # Create a new batch with reshaped data
-        del batch
-        batch = np.zeros((framesNumber,rowSize+1))
-        batch[:,0] = lb # Set labels to the first column of the new batch
-        batch[:,1:] = ft # And features to the remaining columns
+    # Divide the data by utterances:
+    # Get all the utterance labels
+    uttLabels = np.unique(loadedData[:,0])
+    uttSet = []
 
-    # Remove examples with any NaN in their features
-    batch = datasetManipulation.removeNaN(batch)[0]
+    # Identify the frames belonging to one same utterance, extract them from the whole batch and save together to a list
+    for uttLabel in uttLabels:
+        nz = loadedData[:,0] == uttLabel
+        frameSet = loadedData[nz,1:]
+        uttSet.append(frameSet)
 
-    totalRemovedLabels = 0
+    del frameSet
 
-    removedLabels = 0
+    # Process all the batches in the uttSet and separate labels and features
+    features = []
+    labels = []
+    for batch in uttSet:
+        # If the loaded data is the hilbert transform, each frame contains the data of all the cannels separated
+        # If we want to analyze this data with classifiers different from RNNs, they must be reshaped and put into a sigle row
+        if analyzedData == 'hilbert':
+            lb = batch[:,0,0] # Takes the labels from the first channel of each frame (all channels have same labels)
+            ft = batch[:,:,1:] # Takes the features
+            framesNumber = np.shape(batch)[0]
+            rowSize = np.shape(batch)[1]*(np.shape(batch)[2]-1)
+            ft = ft.reshape(framesNumber,rowSize) # And reshapes the data so that, for each frame, data from channels is stacked [ch1, ch2, ch3...]
+            # Create a new batch with reshaped data
+            del batch
+            batch = np.zeros((framesNumber,rowSize+1))
+            batch[:,0] = lb # Set labels to the first column of the new batch
+            batch[:,1:] = ft # And features to the remaining columns
 
-    # If selected, take only the simple or the transition labels and discard the rest of the examples
-    if not (subset == 'test' and KEEP_ALL_FRAMES_IN_TEST):
-        if analyzedLabels == 'simple':
-            batch, removedLabels = datasetManipulation.removeTransitionPhonemes(batch,phoneDict)
-        elif analyzedLabels == 'transitions':
-                batch, removedLabels = datasetManipulation.removeSimplePhonemes(batch,phoneDict)
-                
-    totalRemovedLabels += removedLabels
+        # Remove examples with any NaN in their features
+        batch = datasetManipulation.removeNaN(batch)[0]
 
-    # If the analyzed corpus is Pilot Study and removeContext is set to True, remove the context phonemes
-    if REMOVE_CONTEXT_PHONEMES:
-        batch, removedLabels = datasetManipulation.removeContextPhonesPilotStudy(batch,phoneDict)
+        totalRemovedLabels = 0
+
+        removedLabels = 0
+
+        # If selected, take only the simple or the transition labels and discard the rest of the examples
+        if not (subset == 'test' and KEEP_ALL_FRAMES_IN_TEST):
+            if analyzedLabels == 'simple':
+                batch, removedLabels = datasetManipulation.removeTransitionPhonemes(batch,phoneDict)
+            elif analyzedLabels == 'transitions':
+                    batch, removedLabels = datasetManipulation.removeSimplePhonemes(batch,phoneDict)
+
         totalRemovedLabels += removedLabels
 
-    # Separate labels (first column) from the features (rest of the columns)
-    features = batch[:,1:]
+        # If the analyzed corpus is Pilot Study and removeContext is set to True, remove the context phonemes
+        if REMOVE_CONTEXT_PHONEMES:
+            batch, removedLabels = datasetManipulation.removeContextPhonesPilotStudy(batch,phoneDict)
+            totalRemovedLabels += removedLabels
 
-    if useChannels != []: # If only some channels have been selected
-        features = selectChannels(features,useChannels)
+        # Separate labels (first column) from the features (rest of the columns)
+        features.append(batch[:,1:])
 
-    labels = batch[:,0]
-    
+        if useChannels != []: # If only some channels have been selected
+            features = selectChannels(features,useChannels)
+
+        labels.append(batch[:,0])
+
     return features, labels
 
 def loadMultipleData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData):
@@ -561,6 +578,9 @@ def loadMultipleData(speaker,session,uttType,analyzedLabels,useChannels,phoneDic
     return features, labels
 
 def loadMultipleSessions(speaker,sessions,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData):
+    features = []
+    labels = []
+
     currentSession: str
     for currentSession in sessions:
         # Load features and labels from current session
@@ -569,12 +589,8 @@ def loadMultipleSessions(speaker,sessions,uttType,analyzedLabels,useChannels,pho
         else:
             currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,phoneDict,'both',analyzedData)
         # Add it to the output
-        if currentSession == sessions[0]: # If it's the first session, just copy the matrix to the output
-            features = currentFeatures[:]
-            labels = currentLabels[:]
-        else: # For the rest of the sessions, stack them vertically to the output matrix
-            features = np.concatenate((features,currentFeatures), axis=0)
-            labels = np.concatenate((labels,currentLabels), axis=0)
+        features.append(currentFeatures[:])
+        labels.append(currentLabels[:])
 
     return features, labels
 
@@ -586,7 +602,7 @@ def loadMultipleSpeakers(speakers,uttType,analyzedLabels,useChannels,phoneDict,s
             currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData)
         else:
             currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,phoneDict,'both',analyzedData)
-    
+
         # Add it to the output
         if currentSpeaker == speakers[0]: # If it's the first speaker, just copy loaded data to the output
             features = currentFeatures[:]
@@ -724,15 +740,17 @@ def main(experimentName='default',probes=[]):
                     reductedTrainFeatures, reductedTestFeatures, selector = featureLDAReduction(probe.n_features, trainFeatures, testFeatures, trainLabels)
             elif probe.reductionMethod == 'NoReduction':
                 print("Feature reduction ommited")
-                reductedTrainFeatures = trainFeatures[:]
-                reductedTestFeatures = testFeatures[:]
+                reductedTrainFeatures = trainFeatures
+                reductedTestFeatures = testFeatures
         else:   # If training batch remains the same, use the previous selector to reduce dimensionality of the testing subset
             if testReductionHasChanged:
                 if probe.reductionMethod != 'NoReduction':
-                    reductedTestFeatures = selector.transform(testFeatures)
+                    reductedTestFeatures = []
+                    for i in range(len(testFeatures)):
+                        reductedTestFeatures.append(selector.transform(testFeatures))
                 else:
                     print("Feature reduction ommited")
-                    reductedTestFeatures = testFeatures[:]
+                    reductedTestFeatures = testFeatures
 
         trainAndTest(experimentName, reductedTrainFeatures, trainLabels, reductedTestFeatures, testLabels, uniqueLabels, probe, classifierHasChanged)
 
