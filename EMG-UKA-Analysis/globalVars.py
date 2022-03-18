@@ -24,8 +24,14 @@ N_FEATURES = len(FEATURE_NAMES) # Number of calculated features
 N_CHANNELS = 6 # Number of channels (whitout the syncronization channel)
 N_BATCHES = 1
 STACKING_WIDTH = 15
+STACKING_MODE = 'symmetric' # 'symmetric' or 'backwards' 
 
-ROW_SIZE = N_CHANNELS*N_FEATURES*(STACKING_WIDTH*2 + 1) + 1
+if STACKING_MODE == 'symmetric':
+    ROW_SIZE = N_CHANNELS*N_FEATURES*(STACKING_WIDTH*2 + 1) + 1
+elif STACKING_MODE == 'backwards':
+    ROW_SIZE = N_CHANNELS*N_FEATURES*(STACKING_WIDTH + 1) + 1
+
+KEEP_ALL_FRAMES_IN_TEST = False
 
 #########################
 #   Parameters for MFCC #
@@ -35,12 +41,14 @@ AUDIO_FRAME_SIZE = 0.016
 AUDIO_FRAME_SHIFT = 0.01
 N_FILTERS = 30
 N_COEF = 13
-MFCC_ROW_SIZE = N_COEF*(STACKING_WIDTH*2 + 1) + 1
-
+if STACKING_MODE == 'symmetric':
+    MFCC_ROW_SIZE = N_COEF*(STACKING_WIDTH*2 + 1) + 1
+elif STACKING_MODE == 'backwards':
+    MFCC_ROW_SIZE = N_COEF*(STACKING_WIDTH + 1) + 1
 ########################################
 #   Parameters for Hilbert transform   #
 ########################################
 FRAME_SIZE = 0.025 # Size of the frame used to calculate the EMG features, also the Hilbert transform
 FRAME_SHIFT = 0.005
-HILBERT_FS = 100 # The sampling frequency at which the Hilbert transform is downsampled after being calculated
+HILBERT_FS = 200 # The sampling frequency at which the Hilbert transform is downsampled after being calculated
 HILBERT_ROW_SIZE = math.floor(HILBERT_FS*FRAME_SIZE)*(2*STACKING_WIDTH + 1) + 1 # The size of the Hilbert transform corresponding to the central and the stacked frames

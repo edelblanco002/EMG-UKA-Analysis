@@ -42,6 +42,22 @@ def removeNaN(batch):
 
     return batch, removedExamples
 
+"""def removeNaNHilbert(batch):
+    # This function removes the examples that contains any NaN value in its features
+
+    size0 = np.shape(batch)[0]
+    
+    print(np.shape(np.isnan(batch)))
+
+    nz = np.isnan(batch).sum(2).sum(1)
+    batch = batch[nz == 0,:,:]
+
+    size1 = np.shape(batch)[0]
+
+    removedExamples = size0 - size1
+
+    return batch, removedExamples"""
+
 def removeOutliers(batch,nu=0.2):
     # This function uses the OneClassSVM algorithm to detect outliers and remove them
 
@@ -152,6 +168,56 @@ def removeTransitionPhonemes(batch,phoneDict):
     #print(f"{removedExamples} of {size0} examples removed ({round(removedExamples*100/size0,2)}%)")
     #print("\nremoveTransitionPhonemes execution time: ",time.time()-t0," s")
     return batch, removedExamples
+
+"""def removeTransitionPhonemesHilbert(batch,phoneDict):
+    print("Transition shape in: ",np.shape(batch))
+    # This function removes the examples labeled as transition phonemes or silences
+
+    size0 = np.shape(batch)[0]
+
+    # In the phoneme dictionary, the label 'no_label' and the simple phonemes are at the top of the list
+    # The transition phonemes contains a '+' or '-' mark, so the first transition phoneme is detected by looking if it contains any of those symbols
+    # The last considered phoneme is the one before the first transition phoneme 
+    for key in sorted(phoneDict.keys()):
+        if ('+' in phoneDict[key]) or ('-' in phoneDict[key]):
+            lastKey = key
+            break
+
+    nz = batch[:,0,0] < lastKey
+    batch = batch[nz == True, :]
+
+    # Remove silence phonemes (sp and sil)
+    if REMOVE_SILENCES:
+        labelsToRemove = ['sil','sp']
+
+        for key in sorted(phoneDict.keys()):
+            if phoneDict[key] in labelsToRemove:
+                nz = batch[:,0,0] == key
+                batch = batch[nz == False, :]
+    # If the silences are not removed, map 'sp' silences to 'sil'
+    else:
+        spLabel = -2 # -2 label does not exist, it's just a value to initialize the variable
+        silLabel = -2
+
+        for key in sorted(phoneDict.keys()):
+            # Which is the number key for sp label?
+            if phoneDict[key] == 'sp':
+                spLabel = key
+            # And which is the number key for sil label?
+            elif phoneDict[key] == 'sil':
+                silLabel = key
+            
+        # Assign to 'sp' labels the label of 'sil'
+        batch[batch[:,0] == spLabel, 0] = silLabel
+
+    size1 = np.shape(batch)[0]
+    removedExamples = size0 - size1
+    #print(f"Transition phones and silences removed")
+    #print(f"{removedExamples} of {size0} examples removed ({round(removedExamples*100/size0,2)}%)")
+    #print("\nremoveTransitionPhonemes execution time: ",time.time()-t0," s")
+
+    print("Transition shape out: ",np.shape(batch))
+    return batch, removedExamples"""
 
 def removeContextPhonesPilotStudy(batch,phoneDict):
     # This function its made to work with the PilotStudy

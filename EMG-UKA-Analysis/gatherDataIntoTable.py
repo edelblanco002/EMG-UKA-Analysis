@@ -52,17 +52,24 @@ def buildEMGHilbertTable(utteranceFiles,tableFileName='table',uttType='audible')
         nFramesHilbert = np.shape(auxHilbertMat)[0]
         nFramesFeatures = np.shape(auxFeaturesMat)[0]
 
-        if nFramesFeatures > nFramesHilbert:
-            print('Warning: Number of frames for Hilbert transform is fewer than for emg features.')
+        # Maybe, because of difference in sampling rate, there could be a frame more in one matrix than in the other
+        # If the difference is greather than a frame, probably there is an error 
+        if abs(nFramesHilbert - nFramesFeatures) > 1:
+            frameDifference = abs(nFramesHilbert - nFramesFeatures)
+            print(f"There is a difference of {frameDifference} between hilbert and emg features in {utteranceFile}.")
             raise Exception
 
-        while nFramesHilbert > nFramesFeatures:
+        # If, as expected, the difference is of one frame, remove the end frame in the largest matrix
+        if nFramesFeatures > nFramesHilbert:
+            auxFeaturesMat = np.delete(auxFeaturesMat,-1,axis=0)
+            nFramesFeatures = np.shape(auxFeaturesMat)[0]
+
+        elif nFramesHilbert > nFramesFeatures:
             auxHilbertMat = np.delete(auxHilbertMat,-1,axis=0)
             nFramesHilbert = np.shape(auxHilbertMat)[0]
 
         # Join features and Hilbert into one single matrix
-        nFrames = np.shape(auxFeaturesMat)[0]
-        auxMat = np.zeros((nFrames,ROW_SIZE + N_CHANNELS*(HILBERT_ROW_SIZE - 1)))
+        auxMat = np.zeros((nFramesFeatures,ROW_SIZE + N_CHANNELS*(HILBERT_ROW_SIZE - 1)))
         auxMat[:,0:ROW_SIZE] = auxFeaturesMat[:]
         auxMat[:,ROW_SIZE:] = auxHilbertMat[:]
 

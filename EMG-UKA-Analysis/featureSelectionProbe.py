@@ -1,8 +1,10 @@
+from imghdr import tests
 from classifiers import *
 import datasetManipulation
 from dimensionalityReduction import *
 import gatherDataIntoTable
 from globalVars import DIR_PATH, N_CHANNELS, N_FEATURES, REMOVE_CONTEXT_PHONEMES, STACKING_WIDTH
+from globalVars import KEEP_ALL_FRAMES_IN_TEST
 import numpy as np
 import os
 import pandas as pd
@@ -15,12 +17,12 @@ import time
 import uuid
 
 class Probe:
-    def __init__(self,reductionMethod='',n_features=0,classificationMethod='',scoreFunction='',n_estimators=0,min_samples_leaf=0,speaker='all',session='all',trainSpeaker='',trainSession='',testSpeaker='',testSession='',uttType='audible',analyzedLabels='simple', useChannels=[], analyzedData='emg'):
+    def __init__(self,reductionMethod='',n_features=0,classificationMethod='',scoreFunction='',n_estimators=0,min_samples_leaf=0,batch_size=0,n_epochs=0,speaker='all',session='all',trainSpeaker='',trainSession='',testSpeaker='',testSession='',uttType='audible',analyzedLabels='simple', useChannels=[], analyzedData='emg'):
         self.name = uuid.uuid4().hex[:8]
 
         # Validation rules
         allowedReductionMethods = ['SelectKBest','LDAReduction','NoReduction']
-        allowedClassificationMethods = ['GMMmodels','bagging']
+        allowedClassificationMethods = ['GMMmodels','bagging','NN']
         allowedScoreFunctions = ['f_classif','mutual_info_classif']
         allowedUtteranceTypes = ['audible','whispered','silent']
         allowedAnalyzedLabels = ['simple','transitions','all']
@@ -34,7 +36,7 @@ class Probe:
 
         self.validateReductionMethod(reductionMethod, n_features, scoreFunction, allowedReductionMethods, allowedScoreFunctions)
 
-        self.validateClassificationMethod(classificationMethod, n_estimators, min_samples_leaf, allowedClassificationMethods)
+        self.validateClassificationMethod(classificationMethod, n_estimators, min_samples_leaf, batch_size, n_epochs, allowedClassificationMethods)
 
         self.validateUseChannels(useChannels)
 
@@ -61,7 +63,7 @@ class Probe:
             self.reductionMethod = reductionMethod
 
         # Validation of n_features
-        if n_features == 0:
+        if n_features == 0 and reductionMethod != 'NoReduction':
             print("Please, give a value to 'n_features'")
             raise ValueError
         else:
@@ -126,7 +128,7 @@ class Probe:
                 else:
                     self.testSession = testSession
 
-    def validateClassificationMethod(self, classificationMethod, n_estimators, min_samples_leaf, allowedClassificationMethods):
+    def validateClassificationMethod(self, classificationMethod, n_estimators, min_samples_leaf, batch_size, n_epochs, allowedClassificationMethods):
         # Validation of the classification method
         if not classificationMethod in allowedClassificationMethods:
             print("The allowed values for 'classificationMethod' are the following ones:")
@@ -143,14 +145,19 @@ class Probe:
             if min_samples_leaf == 0:
                 print("Please, give a value to 'min_samples_leaf'")
                 raise ValueError
-                
 
-            self.n_estimators = n_estimators
-            self.min_samples_leaf = min_samples_leaf
+        elif classificationMethod == 'NN':
+            if batch_size == 0:
+                print("Please, give a value to 'batch_size'")
+                raise ValueError
+            if n_epochs == 0:
+                print("Please, give a value to 'n_epochs'")
+                raise ValueError
 
-        else:
-            self.n_estimators = ''
-            self.min_samples_leaf = ''
+        self.batch_size = batch_size
+        self.n_epochs = n_epochs
+        self.n_estimators = n_estimators
+        self.min_samples_leaf = min_samples_leaf
 
     def validateUseChannels(self, useChannels):
         useChannels_set = set(useChannels)
@@ -186,6 +193,106 @@ def checkDifferences(lastProbe: Probe, currentProbe: Probe):
     classifierHasChanged = trainingBatchHasChanged or trainReductionHasChanged or classificationMethod or nEstimators or minSamplesLeaf
 
     return trainingBatchHasChanged, testingBatchHasChanged, trainReductionHasChanged, testReductionHasChanged, classifierHasChanged
+
+def speakerDependent_SessionDependentClassification(dataset: dict,referenceProbe: Probe):
+    probes = []
+
+    for speaker in dataset.keys():
+        for session in dataset[speaker]:
+            probes.append(
+                Probe(
+                    reductionMethod = referenceProbe.reductionMethod,
+                    n_features = referenceProbe.n_features,
+                    classificationMethod = referenceProbe.classificationMethod,
+                    scoreFunction = referenceProbe.scoreFunction,
+                    n_estimators = referenceProbe.n_estimators,
+                    min_samples_leaf = referenceProbe.min_samples_leaf,
+                    batch_size = referenceProbe.batch_size,
+                    n_epochs = referenceProbe.n_epochs,
+                    speaker = speaker,
+                    session = session,
+                    uttType = referenceProbe.uttType,
+                    analyzedLabels = referenceProbe.analyzedLabels,
+                    useChannels = referenceProbe.useChannels,
+                    analyzedData = referenceProbe.analyzedData
+                )
+            )
+
+    return probes
+
+def speakerDependent_SessionIndependentClassification(dataset: dict,referenceProbe: Probe):
+    probes = []
+
+    for currentSpeaker in dataset.keys():
+        sessions = dataset[currentSpeaker]
+
+        if len(sessions) > 1:
+
+            for currentSession in sessions:
+                trainSessions = ()
+                for session in sessions:
+                    if session != currentSession:
+                        trainSessions += (session + '-all', )
+                
+                probes.append(
+                Probe(
+                    reductionMethod = referenceProbe.reductionMethod,
+                    n_features = referenceProbe.n_features,
+                    classificationMethod = referenceProbe.classificationMethod,
+                    scoreFunction = referenceProbe.scoreFunction,
+                    n_estimators = referenceProbe.n_estimators,
+                    min_samples_leaf = referenceProbe.min_samples_leaf,
+                    batch_size = referenceProbe.batch_size,
+                    n_epochs = referenceProbe.n_epochs,
+                    trainSpeaker = currentSpeaker,
+                    trainSession = trainSessions,
+                    testSpeaker = currentSpeaker,
+                    testSession = currentSession + '-all',
+                    uttType = referenceProbe.uttType,
+                    analyzedLabels = referenceProbe.analyzedLabels,
+                    useChannels = referenceProbe.useChannels,
+                    analyzedData = referenceProbe.analyzedData
+                )
+            )
+
+    return probes
+
+def speakerIndependent_SessionIndependentClassification(dataset: dict,referenceProbe: Probe):
+    probes = []
+
+    for currentSpeaker in dataset.keys():
+        sessions = dataset[currentSpeaker]
+
+        trainSpeakers = ()
+
+        for speaker in dataset.keys():
+            if speaker != currentSpeaker:
+                trainSpeakers += (speaker + '-all',)
+
+        for session in sessions:
+            testSession = session + '-all'
+            probes.append(
+                Probe(
+                    reductionMethod = referenceProbe.reductionMethod,
+                    n_features = referenceProbe.n_features,
+                    classificationMethod = referenceProbe.classificationMethod,
+                    scoreFunction = referenceProbe.scoreFunction,
+                    n_estimators = referenceProbe.n_estimators,
+                    min_samples_leaf = referenceProbe.min_samples_leaf,
+                    batch_size = referenceProbe.batch_size,
+                    n_epochs = referenceProbe.n_epochs,
+                    trainSpeaker = trainSpeakers,
+                    trainSession = 'all',
+                    testSpeaker = currentSpeaker,
+                    testSession = testSession,
+                    uttType = referenceProbe.uttType,
+                    analyzedLabels = referenceProbe.analyzedLabels,
+                    useChannels = referenceProbe.useChannels,
+                    analyzedData = referenceProbe.analyzedData
+                )
+            )
+
+    return probes
 
 def probes2csv(probes,probeName):
     df = pd.DataFrame(columns=['Name', 'Train speaker', 'Train session','Test speaker', 'Test session', 'Utterance type', 'Analyzed labels', 'Classification method', 'Reduction method', 'Score function', 'n_estimators', 'min_samples_leaf', 'n_features','Elapsed time in training','Elapsed time in testing with train subset','Elapsed time in testing with test subset','Accuracy with train subset','Accuracy with test subset'])
@@ -238,7 +345,7 @@ def selectChannels(features: np.ndarray,useChannels: list):
 
     return outputFeatures
 
-def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, probe, classifierHasChanged):    
+def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, probe: Probe, classifierHasChanged):    
     # This function trains the GMM models and tests them with the train and the test features
 
     t0 = time.time()
@@ -248,12 +355,21 @@ def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels
             clf = trainGMMmodels(trainFeatures, trainLabels, uniqueLabels)        
         elif probe.classificationMethod == 'bagging':
             clf = trainBaggingClassifier(trainFeatures, trainLabels, n_estimators=probe.n_estimators, min_samples_leaf=probe.min_samples_leaf)
+        elif probe.classificationMethod == 'NN':
+            clf = trainNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch_size=probe.batch_size, n_epochs=probe.n_epochs)
 
     t1 = time.time()
 
     if classifierHasChanged:
         if probe.classificationMethod == 'GMMmodels':
-            trainScore, trainConfusionMatrix = testGMMmodels(clf, trainFeatures, trainLabels,uniqueLabels)
+            trainScore = crossValidationGMM(trainFeatures, trainLabels, uniqueLabels)
+            _, trainConfusionMatrix = testGMMmodels(clf, trainFeatures, trainLabels,uniqueLabels)
+        elif probe.classificationMethod == 'bagging':
+            trainScore = crossValidationBaggingClassifier(trainFeatures, trainLabels, n_estimators=probe.n_estimators, min_samples_leaf=probe.min_samples_leaf)
+            _, trainConfusionMatrix = testClassifier(clf, trainFeatures, trainLabels, uniqueLabels)
+        elif probe.classificationMethod == 'NN':
+            trainScore = crossValidationNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch_size=probe.batch_size, n_epochs=probe.n_epochs)
+            _, trainConfusionMatrix = testNeuralNetwork(clf, trainFeatures, trainLabels,uniqueLabels, batch_size=probe.batch_size)
         else:
             trainScore, trainConfusionMatrix = testClassifier(clf, trainFeatures, trainLabels, uniqueLabels)
 
@@ -268,6 +384,8 @@ def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels
 
     if probe.classificationMethod == 'GMMmodels':
         testScore, testConfusionMatrix = testGMMmodels(clf, testFeatures, testLabels, uniqueLabels)
+    elif probe.classificationMethod == 'NN':
+        testScore, testConfusionMatrix = testNeuralNetwork(clf, testFeatures, testLabels, uniqueLabels, batch_size=probe.batch_size)
     else:
         testScore, testConfusionMatrix = testClassifier(clf, testFeatures, testLabels, uniqueLabels)
 
@@ -407,10 +525,11 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset
     removedLabels = 0
 
     # If selected, take only the simple or the transition labels and discard the rest of the examples
-    if analyzedLabels == 'simple':
-        batch, removedLabels = datasetManipulation.removeTransitionPhonemes(batch,phoneDict)
-    elif analyzedLabels == 'transitions':
-        batch, removedLabels = datasetManipulation.removeSimplePhonemes(batch,phoneDict)
+    if not (subset == 'test' and KEEP_ALL_FRAMES_IN_TEST):
+        if analyzedLabels == 'simple':
+            batch, removedLabels = datasetManipulation.removeTransitionPhonemes(batch,phoneDict)
+        elif analyzedLabels == 'transitions':
+                batch, removedLabels = datasetManipulation.removeSimplePhonemes(batch,phoneDict)
                 
     totalRemovedLabels += removedLabels
 
@@ -426,6 +545,7 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset
         features = selectChannels(features,useChannels)
 
     labels = batch[:,0]
+    
     return features, labels
 
 def loadMultipleData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData):
@@ -587,6 +707,7 @@ def main(experimentName='default',probes=[]):
         # uniqueLabels is a list of the different labels existing in the dataset
         if trainingBatchHasChanged or testingBatchHasChanged:
             uniqueLabels = getUniqueLabels([trainLabels,testLabels])
+            #uniqueLabels = getUniqueLabels(trainLabels)
 
         np.save(f"{DIR_PATH}/results/{experimentName}/{probe.name}_uniqueLabels",uniqueLabels)
 
