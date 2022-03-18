@@ -4,8 +4,10 @@ import math
 DIR_PATH = "/mnt/ldisk/eder/EMG-UKA-Trial-Corpus"
 SCRIPT_PATH = "/home/aholab/eder/scripts/EMG-UKA-Analysis/EMG-UKA-Analysis"
 
+KEEP_ALL_FRAMES_IN_TEST = True
 REMOVE_CONTEXT_PHONEMES = False
-REMOVE_SILENCES = True
+REMOVE_SILENCES = True # Remove the frames labeled as silences 
+REDUCE_CONTEXT_LABELS = False # Consider only one type of transition (A-B transition phonemes will be considered A+B)
 
 CORPUS = "EMG-UKA" # "Pilot Study" or "EMG-UKA"
 
@@ -30,8 +32,6 @@ if STACKING_MODE == 'symmetric':
     ROW_SIZE = N_CHANNELS*N_FEATURES*(STACKING_WIDTH*2 + 1) + 1
 elif STACKING_MODE == 'backwards':
     ROW_SIZE = N_CHANNELS*N_FEATURES*(STACKING_WIDTH + 1) + 1
-
-KEEP_ALL_FRAMES_IN_TEST = False
 
 #########################
 #   Parameters for MFCC #

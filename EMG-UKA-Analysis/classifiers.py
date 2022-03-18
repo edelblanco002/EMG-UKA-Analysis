@@ -1,9 +1,10 @@
 from datasetManipulation import mergeDataset
+from globalVars import KEEP_ALL_FRAMES_IN_TEST, REMOVE_SILENCES
 import numpy as np
 from sklearn.mixture import GaussianMixture as GMM
 from sklearn.model_selection import train_test_split
 
-def crossValidationBaggingClassifier(trainFeatures, trainLabels, uniqueLabels, n_estimators=10, min_samples_leaf=10, kFolds=5):
+def crossValidationBaggingClassifier(trainFeatures, trainLabels, uniqueLabels, phoneDict, n_estimators=10, min_samples_leaf=10, kFolds=5):
     from sklearn.tree import DecisionTreeClassifier
     from sklearn.ensemble import BaggingClassifier
     from sklearn.model_selection import KFold
@@ -28,7 +29,7 @@ def crossValidationBaggingClassifier(trainFeatures, trainLabels, uniqueLabels, n
             testLabelsSubset.append(trainLabels[idx])
 
         clf = trainBaggingClassifier(trainFeaturesSubset, trainLabelsSubset,n_estimators=10, min_samples_leaf=10)
-        actualScore, actualConfusionMatrix= testClassifier(clf, testFeaturesSubset, testLabelsSubset, uniqueLabels)
+        actualScore, actualConfusionMatrix= testClassifier(clf, testFeaturesSubset, testLabelsSubset, uniqueLabels, phoneDict)
         score += actualScore
         confusionMatrix += actualConfusionMatrix
 
@@ -36,7 +37,7 @@ def crossValidationBaggingClassifier(trainFeatures, trainLabels, uniqueLabels, n
 
     return accuracy, confusionMatrix
 
-def crossValidationGMM(trainFeatures, trainLabels, uniqueLabels, kFolds=5):
+def crossValidationGMM(trainFeatures, trainLabels, uniqueLabels, phoneDict, kFolds=5):
     from sklearn.model_selection import KFold
 
     kf = KFold(n_splits=kFolds)
@@ -58,7 +59,7 @@ def crossValidationGMM(trainFeatures, trainLabels, uniqueLabels, kFolds=5):
             testLabelsSubset.append(trainLabels[idx])
 
         clf = trainGMMmodels(trainFeaturesSubset, trainLabelsSubset, uniqueLabels)
-        actualScore, actualConfusionMatrix = testGMMmodels(clf, testFeaturesSubset, testLabelsSubset, uniqueLabels)
+        actualScore, actualConfusionMatrix = testGMMmodels(clf, testFeaturesSubset, testLabelsSubset, uniqueLabels, phoneDict)
         score += actualScore
         confusionMatrix += actualConfusionMatrix
 
@@ -66,7 +67,7 @@ def crossValidationGMM(trainFeatures, trainLabels, uniqueLabels, kFolds=5):
 
     return averagedScore, confusionMatrix
 
-def crossValidationNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch_size, n_epochs, kFolds=5):
+def crossValidationNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, phoneDict, batch_size, n_epochs, kFolds=5):
     from sklearn.model_selection import KFold
 
     kf = KFold(n_splits=kFolds)
@@ -88,7 +89,7 @@ def crossValidationNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch
             testLabelsSubset.append(trainLabels[idx])
 
         clf = trainNeuralNetwork(trainFeatures, trainFeaturesSubset, trainLabelsSubset, batch_size, n_epochs)
-        actualScore, actualConfusionMatrix = testNeuralNetwork(clf, testFeaturesSubset, testLabelsSubset, uniqueLabels, batch_size)
+        actualScore, actualConfusionMatrix = testNeuralNetwork(clf, testFeaturesSubset, testLabelsSubset, uniqueLabels, phoneDict, batch_size)
         score += actualScore
         confusionMatrix += actualConfusionMatrix
 
@@ -96,8 +97,18 @@ def crossValidationNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch
 
     return averagedScore, confusionMatrix
 
-def testClassifier(clf, uttTestFeatures, uttTestLabels, uniqueLabels):
+def testClassifier(clf, uttTestFeatures, uttTestLabels, uniqueLabelsArg, phoneDict):
     # This function calculates the accuracy and saves the confusion matrix of the classification obtained with the given classifier
+    from featureSelectionProbe import getUniqueLabels
+
+    # Check if there is any unique label in the testing subset that is not in the training subset
+    uniqueLabels = uniqueLabelsArg.copy()
+
+    testUniqueLabels = getUniqueLabels(testFeatures)
+    for label in testUniqueLabels:
+        if not label in uniqueLabels:
+            print(f"Label added to uniqueLabels: {phoneDict[label]}")
+            np.append(uniqueLabels,label)
 
     testFeatures, testLabels = mergeDataset(uttTestFeatures, uttTestLabels)
 
@@ -127,8 +138,18 @@ def testClassifier(clf, uttTestFeatures, uttTestLabels, uniqueLabels):
 
     return score, confusionMatrix
 
-def testGMMmodels(models, uttTestFeatures, uttTestLabels, uniqueLabels):
+def testGMMmodels(models, uttTestFeatures, uttTestLabels, uniqueLabelsArg, phoneDict):
     # This function calculates the accuracy and saves the confusion matrix of the model
+    from featureSelectionProbe import getUniqueLabels
+
+    # Check if there is any unique label in the testing subset that is not in the training subset
+    uniqueLabels = uniqueLabelsArg.copy()
+
+    testUniqueLabels = getUniqueLabels(testFeatures)
+    for label in testUniqueLabels:
+        if not label in uniqueLabels:
+            print(f"Label added to uniqueLabels: {phoneDict[label]}")
+            np.append(uniqueLabels,label)
 
     testFeatures, testLabels = mergeDataset(uttTestFeatures,uttTestLabels)
 
@@ -165,6 +186,56 @@ def testGMMmodels(models, uttTestFeatures, uttTestLabels, uniqueLabels):
         trueIdx = np.where(uniqueLabels == trueLabel)[0][0]
     
         confusionMatrix[trueIdx,predictedIdx] += 1 # Confusion matrix: rows -> true labels; columns -> predicted labels
+
+    score = score/nSamples
+
+    return score, confusionMatrix
+
+def testNeuralNetwork(clf, uttTestFeatures, uttTestLabels, uniqueLabelsArg, phoneDict, batch_size):
+    import pandas as pd
+    import numpy as np
+    from featureSelectionProbe import getUniqueLabels
+    
+    # Check if there is any unique label in the testing subset that is not in the training subset
+    uniqueLabels = uniqueLabelsArg.copy()
+
+    testUniqueLabels = getUniqueLabels(testFeatures)
+    for label in testUniqueLabels:
+        if not label in uniqueLabels:
+            print(f"Label added to uniqueLabels: {phoneDict[label]}")
+            np.append(uniqueLabels,label)
+
+    testFeatures, testLabels = mergeDataset(uttTestFeatures, uttTestLabels)
+    
+    nSamples = len(testLabels)
+    nLabels = len(uniqueLabels)
+
+    confusionMatrix = np.zeros((nLabels,nLabels))
+    score = 0.0
+
+    predictions = clf.predict(testFeatures)
+    predictions=np.argmax(predictions,axis=1)
+    
+    nBatches = int(nSamples/batch_size)
+
+    for batch in range(1,nBatches+1):
+        for n in range(1,batch_size+1):
+            idx = (batch*n)-1
+            predictedLabel = predictions[idx]
+            predictedLabel = uniqueLabels[predictedLabel]
+            trueLabel = testLabels[idx]
+
+            # Update the score if necessary
+            if predictedLabel == trueLabel:
+                score += 1
+
+            # Add the example to the confusion matrix
+            predictedIdx = np.where(uniqueLabels == predictedLabel)[0][0]
+            if np.where(uniqueLabels == trueLabel)[0]:
+                trueIdx = np.where(uniqueLabels == trueLabel)[0][0]
+
+            confusionMatrix[trueIdx,predictedIdx] += 1
+        
 
     score = score/nSamples
 
@@ -269,43 +340,3 @@ def trainNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch_size, n_e
     model.fit(trainFeaturesBatch, trainLabelsBatch, validation_data=(valFeaturesBatch, valLabelsBatch), epochs=n_epochs, batch_size=batch_size, callbacks=[early_stopping])
     
     return model
-
-def testNeuralNetwork(clf, uttTestFeatures, uttTestLabels, uniqueLabels, batch_size):
-    import pandas as pd
-    import numpy as np
-    
-    testFeatures, testLabels = mergeDataset(uttTestFeatures, uttTestLabels)
-    
-    nSamples = len(testLabels)
-    nLabels = len(uniqueLabels)
-
-    confusionMatrix = np.zeros((nLabels,nLabels))
-    score = 0.0
-
-    predictions = clf.predict(testFeatures)
-    predictions=np.argmax(predictions,axis=1)
-    
-    nBatches = int(nSamples/batch_size)
-
-    for batch in range(1,nBatches+1):
-        for n in range(1,batch_size+1):
-            idx = (batch*n)-1
-            predictedLabel = predictions[idx]
-            predictedLabel = uniqueLabels[predictedLabel]
-            trueLabel = testLabels[idx]
-
-            # Update the score if necessary
-            if predictedLabel == trueLabel:
-                score += 1
-
-            # Add the example to the confusion matrix
-            predictedIdx = np.where(uniqueLabels == predictedLabel)[0][0]
-            if np.where(uniqueLabels == trueLabel)[0]:
-                trueIdx = np.where(uniqueLabels == trueLabel)[0][0]
-
-            confusionMatrix[trueIdx,predictedIdx] += 1
-        
-
-    score = score/nSamples
-
-    return score, confusionMatrix

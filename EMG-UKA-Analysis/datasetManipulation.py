@@ -1,4 +1,5 @@
-from globalVars import SCRIPT_PATH, REMOVE_SILENCES
+from enum import unique
+from globalVars import SCRIPT_PATH, REDUCE_CONTEXT_LABELS
 import json
 from matplotlib import pyplot as plt
 import numpy as np
@@ -6,6 +7,32 @@ import pandas as pd
 from sklearn.svm import OneClassSVM
 import seaborn as sns
 import time
+
+def convertTransitionToSimple(batch,phoneDict):
+    # This function converts all the transition labels in the dataset to simple labels
+    # The phoneme that takes the largest part in the phoneme is taken ('A' if 'A+B, 'B' if 'A-B')
+
+    # In the phoneme dictionary, the label 'no_label' and the simple phonemes are at the top of the list
+    # The transition phonemes contains a '+' or '-' mark, so the first transition phoneme is detected by looking if it contains any of those symbols
+    # The last considered phoneme is the one before the first transition phoneme 
+    for key in sorted(phoneDict.keys()):
+        if ('+' in phoneDict[key]) or ('-' in phoneDict[key]):
+            lastKey = key
+            break
+
+    # lastKey -> The number label corresponding to the first transition phoneme
+    # The number labels lower than lastKey are simple labels or 'no_label'
+
+    # Take a list with the unique transition labels in batch
+    uniqueLabels = np.unique(batch[:,0])
+    uniqueLabels = uniqueLabels[uniqueLabels >= key]
+
+    # Change the transition labels for simple labels
+    for label in uniqueLabels:
+        simpleLabel = transitionLabelToSimple(label,phoneDict)
+        batch[batch[:,0] == label,0] = simpleLabel
+
+    return batch
 
 def getPhoneDict():
     # This function loads a dictionary that links each label number with its corresponding phoneme.
@@ -40,6 +67,47 @@ def mergeDataset(uttFeatures,uttLabels):
             labels = np.concatenate((labels, uttLabels[i]), axis=0)
 
     return features, labels
+
+def reassignSilences(batch,phoneDict):
+    # This function maps all the silence labels to 'sil'
+    
+
+    spLabel = -2 # -2 label does not exist, it's just a value to initialize the variable
+    silLabel = -2
+    spPsilLabel = -2
+    spMsilLabel = -2
+    silPspLabel = -2
+    silMspLabel = -2
+
+    for key in sorted(phoneDict.keys()):
+        # Which is the number key for sp label?
+        if phoneDict[key] == 'sp':
+            spLabel = key
+        # And which is the number key for sil label?
+        elif phoneDict[key] == 'sil':
+            silLabel = key
+
+        # The same for 'sp+sil','sp-sil','sil+sp','sil-sp'
+        elif phoneDict[key] == 'sp+sil':
+            spPsilLabel = key
+
+        elif phoneDict[key] == 'sp-sil':
+            spMsilLabel = key
+
+        elif phoneDict[key] == 'sil+sp':
+            silPspLabel = key
+
+        elif phoneDict[key] == 'sil-sp':
+            silMspLabel = key
+        
+    # Assign to 'sp' and silence transition labels the label of 'sil'
+    batch[batch[:,0] == spLabel, 0] = silLabel
+    batch[batch[:,0] == spPsilLabel, 0] = silLabel
+    batch[batch[:,0] == spMsilLabel, 0] = silLabel
+    batch[batch[:,0] == silPspLabel, 0] = silLabel
+    batch[batch[:,0] == silMspLabel, 0] = silLabel
+
+    return batch
 
 def removeNaN(batch):
     # This function removes the examples that contains any NaN value in its features
@@ -94,7 +162,24 @@ def removeOutliers(batch,nu=0.2):
     #print("\nremoveOutliers execution time: ",time.time()-t0," s")
     return batch
 
-def removeSimplePhonemes(batch,phoneDict,reduceLabels=True):
+def removeSilences(batch,phoneDict):
+
+    size0 = np.shape(batch)[0]
+
+    labelsToRemove = ['sp','sil','sp+sil','sp-sil','sil+sp','sil-sp']
+
+    for key in sorted(phoneDict.keys()):
+        if phoneDict[key] in labelsToRemove:
+            nz = batch[:,0] == key
+            batch = batch[nz == False, :]
+
+    size1 = np.shape(batch)[0]
+
+    removedExamples = size0 - size1
+
+    return batch, removedExamples
+
+def removeSimplePhonemes(batch,phoneDict):
     # This function removes the examples labeled with simple phonemes or silences
 
     t0 = time.time()
@@ -110,18 +195,9 @@ def removeSimplePhonemes(batch,phoneDict,reduceLabels=True):
     nz = batch[:,0] >= firstKey
     batch = batch[nz == True, :]
 
-    # Remove transitions between silences
-    if REMOVE_SILENCES:
-        labelsToRemove = ['sp+sil','sp-sil','sil+sp','sil-sp']
-
-        for key in sorted(phoneDict.keys()):
-            if phoneDict[key] in labelsToRemove:
-                nz = batch[:,0] == key
-                batch = batch[nz == False, :]
-
-    # If reduceLabels, the labels with '-' are changed for the label of the same phoneme transition but with sign '+' (that shold be the previous label in the map, so it's the previous number)
+    # If REDUCE_CONTEXT_LABELS, the labels with '-' are changed for the label of the same phoneme transition but with sign '+' (that shold be the previous label in the map, so it's the previous number)
     # That way, transitions are no considered to have two parts (A+B and A-B), but only one label for the same transition (A+B) 
-    if reduceLabels:
+    if REDUCE_CONTEXT_LABELS:
         evenCorrection = (firstKey + 2) % 2 # Is the first label with '-' odd (1) or even (0)? (phoneDict[firstKey + 1] shold have '+' sign, so phoneDict[firstKey + 2] has '-')
         for i in range(np.shape(batch)[0]):
             if (batch[i,0] + evenCorrection) % 2 == 0: # Those labels that are odd or even (whatever the first label with '-' is) are changed
@@ -150,30 +226,6 @@ def removeTransitionPhonemes(batch,phoneDict):
 
     nz = batch[:,0] < lastKey
     batch = batch[nz == True, :]
-
-    # Remove silence phonemes (sp and sil)
-    if REMOVE_SILENCES:
-        labelsToRemove = ['sil','sp']
-
-        for key in sorted(phoneDict.keys()):
-            if phoneDict[key] in labelsToRemove:
-                nz = batch[:,0] == key
-                batch = batch[nz == False, :]
-    # If the silences are not removed, map 'sp' silences to 'sil'
-    else:
-        spLabel = -2 # -2 label does not exist, it's just a value to initialize the variable
-        silLabel = -2
-
-        for key in sorted(phoneDict.keys()):
-            # Which is the number key for sp label?
-            if phoneDict[key] == 'sp':
-                spLabel = key
-            # And which is the number key for sil label?
-            elif phoneDict[key] == 'sil':
-                silLabel = key
-            
-        # Assign to 'sp' labels the label of 'sil'
-        batch[batch[:,0] == spLabel, 0] = silLabel
 
     size1 = np.shape(batch)[0]
     removedExamples = size0 - size1
@@ -248,6 +300,38 @@ def removeContextPhonesPilotStudy(batch,phoneDict):
     removedExamples = size0 - size1
 
     return batch, removedExamples
+
+def transitionLabelToSimple(label,phoneDict):
+    # This function is used when the classifier has been trained using simple labels and it's tested with all the labels of the testing subset
+    # If the frame of the testing subset is labeled with a transition label, it's impossible that the classifier can predict it
+    # In those cases, the label of the transition label will be changed for the simple label that takes the largest part of it (determined by '-' and '+' signs)
+
+    returnedLabel = -1000
+
+    charLabel = phoneDict[label]
+
+    if '+' in charLabel: # If 'A+B' label, choose A
+        wantedLabel = charLabel.split('+')[0]
+        # Look for the wanted simple label into the dictionary
+        for key in sorted(phoneDict.keys()):
+            if wantedLabel == phoneDict[key]:
+                returnedLabel = key
+
+    elif '-' in charLabel: # If 'A-B' label, choose B
+        wantedLabel = charLabel.split('-')[1]
+        for key in sorted(phoneDict.keys()):
+            if wantedLabel == phoneDict[key]:
+                returnedLabel = key
+
+    else: # If not '+' or '-' in label, then is not a transition label, but an undetected simple label
+        print(f'Error: Revise the code in transitionLabelsToSimple. It crashed with [{label},{charLabel}] label.')
+        raise ValueError
+
+    if returnedLabel == -1000: # If the value of the returned label has not changed, something went wrong on code
+        print(f'Error: Revise the code in transitionLabelsToSimple. It crashed with [{label}] label.')
+        raise ValueError
+
+    return returnedLabel
 
 def visualizeUnivariateStats(batch):
     # This function draws a plot with a subplot for each kind of feature, to show its univariate distribution

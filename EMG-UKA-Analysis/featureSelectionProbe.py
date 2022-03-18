@@ -3,7 +3,8 @@ from classifiers import *
 import datasetManipulation
 from dimensionalityReduction import *
 import gatherDataIntoTable
-from globalVars import DIR_PATH, N_CHANNELS, N_FEATURES, REMOVE_CONTEXT_PHONEMES, STACKING_WIDTH
+from globalVars import DIR_PATH, N_CHANNELS, N_FEATURES, STACKING_WIDTH
+from globalVars import REMOVE_CONTEXT_PHONEMES, REMOVE_SILENCES
 from globalVars import KEEP_ALL_FRAMES_IN_TEST
 import numpy as np
 import os
@@ -345,7 +346,7 @@ def selectChannels(features: np.ndarray,useChannels: list):
 
     return outputFeatures
 
-def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, probe: Probe, classifierHasChanged):
+def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, phoneDict, probe: Probe, classifierHasChanged):
     # This function trains the GMM models and tests them with the train and the test features
 
     t0 = time.time()
@@ -362,13 +363,13 @@ def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels
 
     if classifierHasChanged:
         if probe.classificationMethod == 'GMMmodels':
-            trainScore, trainConfusionMatrix = crossValidationGMM(trainFeatures, trainLabels, uniqueLabels)
+            trainScore, trainConfusionMatrix = crossValidationGMM(trainFeatures, trainLabels, uniqueLabels, phoneDict)
         elif probe.classificationMethod == 'bagging':
-            trainScore, trainConfusionMatrix = crossValidationBaggingClassifier(trainFeatures, trainLabels, uniqueLabels, n_estimators=probe.n_estimators, min_samples_leaf=probe.min_samples_leaf)
+            trainScore, trainConfusionMatrix = crossValidationBaggingClassifier(trainFeatures, trainLabels, uniqueLabels, phoneDict, n_estimators=probe.n_estimators, min_samples_leaf=probe.min_samples_leaf)
         elif probe.classificationMethod == 'NN':
-            trainScore, trainConfusionMatrix = crossValidationNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch_size=probe.batch_size, n_epochs=probe.n_epochs)
+            trainScore, trainConfusionMatrix = crossValidationNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, phoneDict, batch_size=probe.batch_size, n_epochs=probe.n_epochs)
         else:
-            trainScore, trainConfusionMatrix = testClassifier(clf, trainFeatures, trainLabels, uniqueLabels)
+            trainScore, trainConfusionMatrix = testClassifier(clf, trainFeatures, trainLabels, uniqueLabels, phoneDict)
 
         with open(f"{DIR_PATH}/results/{probeName}/lastTrainingResults.pkl",'wb') as file:
             pickle.dump([clf, trainScore, trainConfusionMatrix],file)
@@ -380,11 +381,11 @@ def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels
     t2 = time.time()
 
     if probe.classificationMethod == 'GMMmodels':
-        testScore, testConfusionMatrix = testGMMmodels(clf, testFeatures, testLabels, uniqueLabels)
+        testScore, testConfusionMatrix = testGMMmodels(clf, testFeatures, testLabels, uniqueLabels, phoneDict)
     elif probe.classificationMethod == 'NN':
-        testScore, testConfusionMatrix = testNeuralNetwork(clf, testFeatures, testLabels, uniqueLabels, batch_size=probe.batch_size)
+        testScore, testConfusionMatrix = testNeuralNetwork(clf, testFeatures, testLabels, uniqueLabels, phoneDict, batch_size=probe.batch_size)
     else:
-        testScore, testConfusionMatrix = testClassifier(clf, testFeatures, testLabels, uniqueLabels)
+        testScore, testConfusionMatrix = testClassifier(clf, testFeatures, testLabels, uniqueLabels, phoneDict)
 
     t3 = time.time()
 
@@ -542,11 +543,23 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset
         removedLabels = 0
 
         # If selected, take only the simple or the transition labels and discard the rest of the examples
-        if not (subset == 'test' and KEEP_ALL_FRAMES_IN_TEST):
+        if not (subset == 'test' and KEEP_ALL_FRAMES_IN_TEST): # If KEEP_ALL_FRAMES_IN_TEST, no frame is discarded from testing subset
             if analyzedLabels == 'simple':
                 batch, removedLabels = datasetManipulation.removeTransitionPhonemes(batch,phoneDict)
             elif analyzedLabels == 'transitions':
                     batch, removedLabels = datasetManipulation.removeSimplePhonemes(batch,phoneDict)
+
+            totalRemovedLabels += removedLabels
+
+        # If the classifier will be trained only with simple labels but it will be tested with all test frames,
+        # change the transition labels in test for simple labels
+        if subset == 'test' and KEEP_ALL_FRAMES_IN_TEST and analyzedLabels == 'simple':
+            batch = datasetManipulation.convertTransitionToSimple(batch, phoneDict)
+
+        if REMOVE_SILENCES:
+            batch, removedLabels = datasetManipulation.removeSilences(batch,phoneDict)
+        else: # If the silences are not removed, all the silence labels are mapped to 'sil'
+            batch = datasetManipulation.reassignSilences(batch,phoneDict)
 
         totalRemovedLabels += removedLabels
 
@@ -722,8 +735,7 @@ def main(experimentName='default',probes=[]):
                 raise ValueError
         # uniqueLabels is a list of the different labels existing in the dataset
         if trainingBatchHasChanged or testingBatchHasChanged:
-            uniqueLabels = getUniqueLabels([trainLabels,testLabels])
-            #uniqueLabels = getUniqueLabels(trainLabels)
+            uniqueLabels = getUniqueLabels(trainLabels)
 
         np.save(f"{DIR_PATH}/results/{experimentName}/{probe.name}_uniqueLabels",uniqueLabels)
 
@@ -752,6 +764,6 @@ def main(experimentName='default',probes=[]):
                     print("Feature reduction ommited")
                     reductedTestFeatures = testFeatures
 
-        trainAndTest(experimentName, reductedTrainFeatures, trainLabels, reductedTestFeatures, testLabels, uniqueLabels, probe, classifierHasChanged)
+        trainAndTest(experimentName, reductedTrainFeatures, trainLabels, reductedTestFeatures, testLabels, uniqueLabels, phoneDict, probe, classifierHasChanged)
 
     gatherDataIntoTable.removeTables()
