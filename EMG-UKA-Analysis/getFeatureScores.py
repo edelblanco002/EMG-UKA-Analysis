@@ -23,8 +23,6 @@ def getFeatureScores(batch):
     return clfFClass.scores_, clfMutual.scores_
 
 def main(uttType='audible',analyzedLabels='all',speaker='all',session='all',analyzeMFCCs=False):
-        
-    phoneDict = datasetManipulation.getPhoneDict()
     
     gatherDataIntoTable.main(uttType=uttType,subset='both',speaker='all',session='all')
 
@@ -76,15 +74,15 @@ def main(uttType='audible',analyzedLabels='all',speaker='all',session='all',anal
         removedLabels = 0
 
         if analyzedLabels == 'simple':
-            batch, removedLabels = datasetManipulation.removeTransitionPhonemes(batch,phoneDict)
+            batch, removedLabels = datasetManipulation.removeTransitionPhonemes(batch)
         elif analyzedLabels == 'transitions':
-            batch, removedLabels = datasetManipulation.removeSimplePhonemes(batch,phoneDict)
+            batch, removedLabels = datasetManipulation.removeSimplePhonemes(batch)
 
         totalRemovedLabels += removedLabels
 
         # If the analyzed corpus is Pilot Study and removeContext is set to True, remove the context phonemes
         if REMOVE_CONTEXT_PHONEMES:
-            batch, removedLabels = datasetManipulation.removeContextPhonesPilotStudy(batch,phoneDict)
+            batch, removedLabels = datasetManipulation.removeContextPhonesPilotStudy(batch)
 
         totalRemovedLabels += removedLabels
 

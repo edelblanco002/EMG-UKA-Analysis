@@ -12,19 +12,21 @@ import traceback
 
 speakersAndSessions = {}
 speakersAndSessions['002'] = ['001']
-#speakersAndSessions['002'] = ['001','003','101']
-#speakersAndSessions['004'] = ['001']
-#speakersAndSessions['006'] = ['001']
-#speakersAndSessions['008'] = [str(i).zfill(3) for i in range(1,9)]
+speakersAndSessions['002'] = ['001','003','101']
+speakersAndSessions['004'] = ['001']
+speakersAndSessions['006'] = ['001']
+speakersAndSessions['008'] = [str(i).zfill(3) for i in range(1,9)]
 
-experimentName = 'Prueba'
+allProbes = []
+
+experimentName = 'SPK_D-SS_D-Bagging_2-Simple'
 
 referenceProbe = Probe(
     uttType='audible',
     analyzedLabels='simple',
     reductionMethod = 'LDAReduction',
-    classificationMethod = 'GMMmodels',
     n_features=32,
+    classificationMethod = 'bagging',
     n_estimators=100,
     min_samples_leaf=50,
     analyzedData='emg'
@@ -32,12 +34,56 @@ referenceProbe = Probe(
 
 probes = speakerDependent_SessionDependentClassification(speakersAndSessions,referenceProbe)
 
-try:
-    featureSelectionProbe.main(experimentName,probes)
-    classifierEvaluation.main(experimentName,probes)
+allProbes.append([experimentName,probes])
 
-except:
-	telegramNotification.sendTelegram('Execution failed')
-	traceback.print_exc()
+##############################################################
 
-telegramNotification.sendTelegram("End of execution")
+experimentName = 'SPK_D-SS_D-Bagging_2-Transitions'
+
+referenceProbe = Probe(
+    uttType='audible',
+    analyzedLabels='transitions',
+    reductionMethod = 'LDAReduction',
+    n_features=32,
+    classificationMethod = 'bagging',
+    n_estimators=100,
+    min_samples_leaf=50,
+    analyzedData='emg'
+)
+
+probes = speakerDependent_SessionDependentClassification(speakersAndSessions,referenceProbe)
+
+allProbes.append([experimentName,probes])
+
+##############################################################
+
+experimentName = 'SPK_D-SS_D-Bagging_2-All'
+
+referenceProbe = Probe(
+    uttType='audible',
+    analyzedLabels='all',
+    reductionMethod = 'LDAReduction',
+    n_features=32,
+    classificationMethod = 'bagging',
+    n_estimators=100,
+    min_samples_leaf=50,
+    analyzedData='emg'
+)
+
+probes = speakerDependent_SessionDependentClassification(speakersAndSessions,referenceProbe)
+
+allProbes.append([experimentName,probes])
+
+###############################################################
+
+for experimentName, probes in allProbes:
+    try:
+        featureSelectionProbe.main(experimentName,probes)
+        classifierEvaluation.main(experimentName,probes)
+
+    except:
+        telegramNotification.sendTelegram('Execution failed')
+        traceback.print_exc()
+
+    telegramNotification.sendTelegram("End of execution")
+telegramNotification.sendTelegram("End of complete execution")

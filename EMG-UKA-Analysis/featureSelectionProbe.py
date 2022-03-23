@@ -4,8 +4,9 @@ import datasetManipulation
 from dimensionalityReduction import *
 import gatherDataIntoTable
 from globalVars import DIR_PATH, N_CHANNELS, N_FEATURES, STACKING_WIDTH
-from globalVars import REMOVE_CONTEXT_PHONEMES, REMOVE_SILENCES
+from globalVars import REMOVE_CONTEXT_PHONEMES, REMOVE_SILENCES, REMOVE_SILENCES_AT_ENDS
 from globalVars import KEEP_ALL_FRAMES_IN_TEST
+from globalVars import PHONE_DICT
 import numpy as np
 import os
 import pandas as pd
@@ -296,7 +297,10 @@ def speakerIndependent_SessionIndependentClassification(dataset: dict,referenceP
     return probes
 
 def probes2csv(probes,probeName):
-    df = pd.DataFrame(columns=['Name', 'Train speaker', 'Train session','Test speaker', 'Test session', 'Utterance type', 'Analyzed labels', 'Classification method', 'Reduction method', 'Score function', 'n_estimators', 'min_samples_leaf', 'n_features','Elapsed time in training','Elapsed time in testing with train subset','Elapsed time in testing with test subset','Accuracy with train subset','Accuracy with test subset'])
+    if not KEEP_ALL_FRAMES_IN_TEST:
+        df = pd.DataFrame(columns=['Name', 'Train speaker', 'Train session','Test speaker', 'Test session', 'Utterance type', 'Analyzed labels', 'Classification method', 'Reduction method', 'Score function', 'n_estimators', 'min_samples_leaf', 'n_features','Elapsed time in training','Elapsed time in testing with train subset','Elapsed time in testing with test subset','Accuracy with train subset','Accuracy with test subset'])
+    else:
+        df = pd.DataFrame(columns=['Name', 'Train speaker', 'Train session','Test speaker', 'Test session', 'Utterance type', 'Analyzed labels', 'Classification method', 'Reduction method', 'Score function', 'n_estimators', 'min_samples_leaf', 'n_features','Elapsed time in training','Elapsed time in testing with train subset','Elapsed time in testing with test subset','Accuracy with train subset','Accuracy with test subset','Accuracy with simple labels','Accuracy with transition labels'])
 
     probe: Probe
     for probe in probes:
@@ -334,6 +338,22 @@ def saveExecutionResults(name,trainingTime,testingTrainTime,testingTestTime,trai
 
     df.to_csv(f"{DIR_PATH}/results/{probeName}/probeList.csv",index=0)
 
+def saveExecutionResultsAllFrames(name,trainingTime,testingTrainTime,testingTestTime,trainScore,testScore,testSimpleScore,testTransitionScore,probeName):
+    df = pd.read_csv(f"{DIR_PATH}/results/{probeName}/probeList.csv")
+
+    # Time is stored in seconds, so it can be easily manipulated in the future
+    df.loc[df['Name'] == name,['Elapsed time in training']] = trainingTime
+    df.loc[df['Name'] == name,['Elapsed time in testing with train subset']] = testingTrainTime
+    df.loc[df['Name'] == name,['Elapsed time in testing with test subset']] = testingTestTime
+
+    # Accuracy scores are stored as float, representing the percentage
+    df.loc[df['Name'] == name,['Accuracy with train subset']] = trainScore
+    df.loc[df['Name'] == name,['Accuracy with test subset']] = testScore
+    df.loc[df['Name'] == name,['Accuracy with simple labels']] = testSimpleScore
+    df.loc[df['Name'] == name,['Accuracy with transition labels']] = testTransitionScore
+
+    df.to_csv(f"{DIR_PATH}/results/{probeName}/probeList.csv",index=0)
+
 def selectChannels(features: np.ndarray,useChannels: list):
     nFrames = features.shape[0]
     featuresPerChannel = N_FEATURES*(STACKING_WIDTH*2 + 1)
@@ -346,8 +366,10 @@ def selectChannels(features: np.ndarray,useChannels: list):
 
     return outputFeatures
 
-def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, phoneDict, probe: Probe, classifierHasChanged):
+def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels, uniqueLabels, probe: Probe, classifierHasChanged):
     # This function trains the GMM models and tests them with the train and the test features
+
+    np.save(f"{DIR_PATH}/results/{probeName}/{probe.name}_uniqueTrainLabels",uniqueLabels)
 
     t0 = time.time()
 
@@ -363,13 +385,13 @@ def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels
 
     if classifierHasChanged:
         if probe.classificationMethod == 'GMMmodels':
-            trainScore, trainConfusionMatrix = crossValidationGMM(trainFeatures, trainLabels, uniqueLabels, phoneDict)
+            trainScore, trainConfusionMatrix = crossValidationGMM(trainFeatures, trainLabels, uniqueLabels)
         elif probe.classificationMethod == 'bagging':
-            trainScore, trainConfusionMatrix = crossValidationBaggingClassifier(trainFeatures, trainLabels, uniqueLabels, phoneDict, n_estimators=probe.n_estimators, min_samples_leaf=probe.min_samples_leaf)
+            trainScore, trainConfusionMatrix = crossValidationBaggingClassifier(trainFeatures, trainLabels, uniqueLabels, n_estimators=probe.n_estimators, min_samples_leaf=probe.min_samples_leaf)
         elif probe.classificationMethod == 'NN':
-            trainScore, trainConfusionMatrix = crossValidationNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, phoneDict, batch_size=probe.batch_size, n_epochs=probe.n_epochs)
+            trainScore, trainConfusionMatrix = crossValidationNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch_size=probe.batch_size, n_epochs=probe.n_epochs)
         else:
-            trainScore, trainConfusionMatrix = testClassifier(clf, trainFeatures, trainLabels, uniqueLabels, phoneDict)
+            trainScore, trainConfusionMatrix, _ = testClassifier(clf, trainFeatures, trainLabels, uniqueLabels)
 
         with open(f"{DIR_PATH}/results/{probeName}/lastTrainingResults.pkl",'wb') as file:
             pickle.dump([clf, trainScore, trainConfusionMatrix],file)
@@ -380,12 +402,20 @@ def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels
 
     t2 = time.time()
 
-    if probe.classificationMethod == 'GMMmodels':
-        testScore, testConfusionMatrix = testGMMmodels(clf, testFeatures, testLabels, uniqueLabels, phoneDict)
-    elif probe.classificationMethod == 'NN':
-        testScore, testConfusionMatrix = testNeuralNetwork(clf, testFeatures, testLabels, uniqueLabels, phoneDict, batch_size=probe.batch_size)
+    if KEEP_ALL_FRAMES_IN_TEST:
+        if probe.classificationMethod == 'GMMmodels':
+            testScore, testSimpleScore, testTransitionScore, testConfusionMatrix, testSimpleConfusionMatrix, testTransitionConfusionMatrix, uniqueLabels, uniqueSimpleLabels, uniqueTransitionLabels = testGMMmodelsAllFrames(clf, testFeatures, testLabels, uniqueLabels)
+        elif probe.classificationMethod == 'NN':
+            testScore, testSimpleScore, testTransitionScore, testConfusionMatrix, testSimpleConfusionMatrix, testTransitionConfusionMatrix, uniqueLabels, uniqueSimpleLabels, uniqueTransitionLabels = testNeuralNetworkAllFrames(clf, testFeatures, testLabels, uniqueLabels, batch_size=probe.batch_size)
+        else:
+            testScore, testSimpleScore, testTransitionScore, testConfusionMatrix, testSimpleConfusionMatrix, testTransitionConfusionMatrix, uniqueLabels, uniqueSimpleLabels, uniqueTransitionLabels = testClassifierAllFrames(clf, testFeatures, testLabels, uniqueLabels)
     else:
-        testScore, testConfusionMatrix = testClassifier(clf, testFeatures, testLabels, uniqueLabels, phoneDict)
+        if probe.classificationMethod == 'GMMmodels':
+            testScore, testConfusionMatrix, uniqueLabels = testGMMmodels(clf, testFeatures, testLabels, uniqueLabels)
+        elif probe.classificationMethod == 'NN':
+            testScore, testConfusionMatrix, uniqueLabels = testNeuralNetwork(clf, testFeatures, testLabels, uniqueLabels, batch_size=probe.batch_size)
+        else:
+            testScore, testConfusionMatrix, uniqueLabels = testClassifier(clf, testFeatures, testLabels, uniqueLabels)
 
     t3 = time.time()
 
@@ -440,9 +470,20 @@ def trainAndTest(probeName, trainFeatures, trainLabels, testFeatures, testLabels
     with open(f"{DIR_PATH}/results/{probeName}/{probe.name}_Execution.txt","w+") as file:
         file.write(message)
 
-    saveExecutionResults(probe.name,trainingTime,testingTrainTime,testingTestTime,trainScore,testScore,probeName)
+    
+
     np.save(f"{DIR_PATH}/results/{probeName}/{probe.name}_TrainConfusionMatrix", trainConfusionMatrix)
     np.save(f"{DIR_PATH}/results/{probeName}/{probe.name}_TestConfusionMatrix", testConfusionMatrix)
+    np.save(f"{DIR_PATH}/results/{probeName}/{probe.name}_uniqueLabels",uniqueLabels)
+
+    if KEEP_ALL_FRAMES_IN_TEST:
+        np.save(f"{DIR_PATH}/results/{probeName}/{probe.name}_TestSimpleConfusionMatrix", testSimpleConfusionMatrix)
+        np.save(f"{DIR_PATH}/results/{probeName}/{probe.name}_TestTransitionConfusionMatrix", testTransitionConfusionMatrix)
+        np.save(f"{DIR_PATH}/results/{probeName}/{probe.name}_uniqueSimpleLabels", uniqueSimpleLabels)
+        np.save(f"{DIR_PATH}/results/{probeName}/{probe.name}_uniqueTransitionLabels", uniqueTransitionLabels)
+        saveExecutionResultsAllFrames(probe.name,trainingTime,testingTrainTime,testingTestTime,trainScore,testScore,testSimpleScore,testTransitionScore,probeName)
+    else:
+        saveExecutionResults(probe.name,trainingTime,testingTrainTime,testingTestTime,trainScore,testScore,probeName)
 
 def getUniqueLabels(list1):
 # This function returns a list of the labels that exist in the dataset
@@ -472,7 +513,7 @@ def getUniqueLabels(list1):
 
     return sorted(unique_list)
 
-def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData):
+def loadData(speaker,session,uttType,analyzedLabels,useChannels,subset,analyzedData):
     # If speaker or session have been marked with '-all' in order to use both train and test subsets,
     # then remove the '-all' mark
     if speaker.endswith('-all'):
@@ -545,27 +586,34 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset
         # If selected, take only the simple or the transition labels and discard the rest of the examples
         if not (subset == 'test' and KEEP_ALL_FRAMES_IN_TEST): # If KEEP_ALL_FRAMES_IN_TEST, no frame is discarded from testing subset
             if analyzedLabels == 'simple':
-                batch, removedLabels = datasetManipulation.removeTransitionPhonemes(batch,phoneDict)
+                batch, removedLabels = datasetManipulation.removeTransitionPhonemes(batch)
             elif analyzedLabels == 'transitions':
-                    batch, removedLabels = datasetManipulation.removeSimplePhonemes(batch,phoneDict)
+                    batch, removedLabels = datasetManipulation.removeSimplePhonemes(batch)
+                    batch = datasetManipulation.convertTransitionToSimple(batch) # Map transition labels to simple labels
+            elif analyzedLabels == 'all':
+                    batch = datasetManipulation.convertTransitionToSimple(batch) # Map transition labels to simple labels
 
             totalRemovedLabels += removedLabels
 
-        # If the classifier will be trained only with simple labels but it will be tested with all test frames,
-        # change the transition labels in test for simple labels
-        if subset == 'test' and KEEP_ALL_FRAMES_IN_TEST and analyzedLabels == 'simple':
-            batch = datasetManipulation.convertTransitionToSimple(batch, phoneDict)
-
         if REMOVE_SILENCES:
-            batch, removedLabels = datasetManipulation.removeSilences(batch,phoneDict)
+            batch, removedLabels = datasetManipulation.removeSilences(batch)
+        elif REMOVE_SILENCES_AT_ENDS:
+            batch, removedLabels = datasetManipulation.removeSilencesAtEnds(batch)
+            batch = datasetManipulation.reassignSilences(batch) # Map the remaining silences to 'sil'
         else: # If the silences are not removed, all the silence labels are mapped to 'sil'
-            batch = datasetManipulation.reassignSilences(batch,phoneDict)
+            batch = datasetManipulation.reassignSilences(batch)
+
+        # If the classifier has been trained only with simple labels but it will be tested with all frames of the training subset
+        # and, also, all silences have been removed both from training subset and testing subset
+        # then remove from training subset those transition phonemes that, during testing, are going to be mapped are silences, because their largest part is a silence ('sil+AH', 'B-sp'...) 
+        if REMOVE_SILENCES and subset == 'test' and KEEP_ALL_FRAMES_IN_TEST:
+            batch = datasetManipulation.removeTransitionPhonemesMostlySilence(batch)
 
         totalRemovedLabels += removedLabels
 
         # If the analyzed corpus is Pilot Study and removeContext is set to True, remove the context phonemes
         if REMOVE_CONTEXT_PHONEMES:
-            batch, removedLabels = datasetManipulation.removeContextPhonesPilotStudy(batch,phoneDict)
+            batch, removedLabels = datasetManipulation.removeContextPhonesPilotStudy(batch)
             totalRemovedLabels += removedLabels
 
         # Separate labels (first column) from the features (rest of the columns)
@@ -578,19 +626,19 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset
 
     return features, labels
 
-def loadMultipleData(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData):
+def loadMultipleData(speaker,session,uttType,analyzedLabels,useChannels,subset,analyzedData):
     if (type(speaker) is tuple):
         if session != 'all':
             print(f"ERROR: If you are selecting multiple speakers for {subset}ing, you must select all sessions.")
             raise ValueError
         else:
-            features, labels = loadMultipleSpeakers(speaker,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData)
+            features, labels = loadMultipleSpeakers(speaker,uttType,analyzedLabels,useChannels,subset,analyzedData)
     else: # If speaker is not a tuple, then session must be a tuple
-        features, labels = loadMultipleSessions(speaker,session,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData)
+        features, labels = loadMultipleSessions(speaker,session,uttType,analyzedLabels,useChannels,subset,analyzedData)
 
     return features, labels
 
-def loadMultipleSessions(speaker,sessions,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData):
+def loadMultipleSessions(speaker,sessions,uttType,analyzedLabels,useChannels,subset,analyzedData):
     features = []
     labels = []
 
@@ -598,23 +646,23 @@ def loadMultipleSessions(speaker,sessions,uttType,analyzedLabels,useChannels,pho
     for currentSession in sessions:
         # Load features and labels from current session
         if not currentSession.endswith('-all'):
-            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData)
+            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,subset,analyzedData)
         else:
-            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,phoneDict,'both',analyzedData)
+            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,'both',analyzedData)
         # Add it to the output
         features.append(currentFeatures[:])
         labels.append(currentLabels[:])
 
     return features, labels
 
-def loadMultipleSpeakers(speakers,uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData):
+def loadMultipleSpeakers(speakers,uttType,analyzedLabels,useChannels,subset,analyzedData):
     currentSpeaker: str
     for currentSpeaker in speakers:
         # Load data for current speaker
         if not currentSpeaker.endswith('-all'):
-            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,phoneDict,subset,analyzedData)
+            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,subset,analyzedData)
         else:
-            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,phoneDict,'both',analyzedData)
+            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,'both',analyzedData)
 
         # Add it to the output
         if currentSpeaker == speakers[0]: # If it's the first speaker, just copy loaded data to the output
@@ -650,11 +698,8 @@ def main(experimentName='default',probes=[]):
 
     probes2csv(probes,experimentName)
 
-    # Create a dictionary number -> phoneme and save it for further checking
-    phoneDict = datasetManipulation.getPhoneDict()
-
     with open(f"{DIR_PATH}/results/{experimentName}/phoneDict.pkl","wb+") as file:
-        pickle.dump(phoneDict,file)
+        pickle.dump(PHONE_DICT,file)
 
     # Create the description of the experiment
     message = f"{experimentName}:\nTrying:\n\n"
@@ -713,11 +758,11 @@ def main(experimentName='default',probes=[]):
         if trainingBatchHasChanged:
             if (type(probe.trainSpeaker) is str) and (type(probe.trainSession) is str):
                 if (not probe.trainSpeaker.endswith('-all')) and (not probe.trainSession.endswith('-all')):
-                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'train',probe.analyzedData)
+                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'train',probe.analyzedData)
                 else:
-                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'both',probe.analyzedData)
+                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'both',probe.analyzedData)
             elif (type(probe.trainSpeaker) is tuple) or (type(probe.trainSession) is tuple):
-                trainFeatures, trainLabels = loadMultipleData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'train',probe.analyzedData)
+                trainFeatures, trainLabels = loadMultipleData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'train',probe.analyzedData)
             else:
                 print(f'ERROR: Wrong type for trainSpeaker ({probe.trainSpeaker}) or trainSession ({probe.trainSession})')
                 raise ValueError
@@ -725,19 +770,17 @@ def main(experimentName='default',probes=[]):
         if testingBatchHasChanged:
             if (type(probe.testSpeaker) is str) and (type(probe.testSession) is str):
                 if not probe.testSpeaker.endswith('-all') and not probe.testSession.endswith('-all'):
-                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'test',probe.analyzedData)
+                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'test',probe.analyzedData)
                 else:
-                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'both',probe.analyzedData)
+                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'both',probe.analyzedData)
             elif (type(probe.testSpeaker) is tuple) or (type(probe.testSession) is tuple):
-                testFeatures, testLabels = loadMultipleData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,phoneDict,'test',probe.analyzedData)
+                testFeatures, testLabels = loadMultipleData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'test',probe.analyzedData)
             else:
                 print(f'ERROR: Wrong type for testSpeaker ({probe.testSpeaker}) or testSession ({probe.testSession})')
                 raise ValueError
         # uniqueLabels is a list of the different labels existing in the dataset
         if trainingBatchHasChanged or testingBatchHasChanged:
             uniqueLabels = getUniqueLabels(trainLabels)
-
-        np.save(f"{DIR_PATH}/results/{experimentName}/{probe.name}_uniqueLabels",uniqueLabels)
 
         # Perform: Feature reduction, train and test
         if trainReductionHasChanged: # If training batch or the dim. reduction options have changed: train the selector to reduce dimensionality
@@ -764,6 +807,6 @@ def main(experimentName='default',probes=[]):
                     print("Feature reduction ommited")
                     reductedTestFeatures = testFeatures
 
-        trainAndTest(experimentName, reductedTrainFeatures, trainLabels, reductedTestFeatures, testLabels, uniqueLabels, phoneDict, probe, classifierHasChanged)
+        trainAndTest(experimentName, reductedTrainFeatures, trainLabels, reductedTestFeatures, testLabels, uniqueLabels, probe, classifierHasChanged)
 
     gatherDataIntoTable.removeTables()
