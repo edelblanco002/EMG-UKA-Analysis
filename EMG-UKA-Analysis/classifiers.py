@@ -346,16 +346,16 @@ def trainNeuralNetwork(trainFeatures, trainLabels, uniqueLabels, batch_size, n_e
     # define the keras model
     model = Sequential()
     #model.add(Dense(len(trainFeatures[0])*2, input_dim=len(trainFeatures[0]), activation='relu'))
-    model.add(Dense(32, input_dim=len(trainFeaturesBatch[0]), activation='relu'))
+    model.add(Dense(len(trainFeaturesBatch[0])*2, input_dim=len(trainFeaturesBatch[0]), activation='relu'))
     model.add(Dense(len(uniqueLabels), activation='softmax'))
     
     # compile the keras model
     model.compile(loss="categorical_crossentropy", optimizer= "adam", metrics=['accuracy'])
     
-    early_stopping = EarlyStopping(patience=10)
+    #early_stopping = EarlyStopping(patience=10)
 
     # fit the keras model on the dataset
-    model.fit(trainFeaturesBatch, trainLabelsBatch, validation_data=(valFeaturesBatch, valLabelsBatch), epochs=n_epochs, batch_size=batch_size, callbacks=[early_stopping])
+    model.fit(trainFeaturesBatch, trainLabelsBatch, validation_data=(valFeaturesBatch, valLabelsBatch), epochs=n_epochs, batch_size=batch_size )#, callbacks=[early_stopping])
     
     return model
 
@@ -376,6 +376,8 @@ def testClassifierAllFrames(clf, uttTestFeatures, uttTestLabels, uniqueLabelsArg
         if not label in uniqueLabels:
             #print(f"Label added to uniqueLabels: {PHONE_DICT[label]}")
             uniqueLabels = np.append(uniqueLabels,label)
+
+    uniqueLabels.sort()
 
     uniqueSimpleLabels = []
     uniqueTransitionLabels = []
@@ -439,7 +441,7 @@ def testClassifierAllFrames(clf, uttTestFeatures, uttTestLabels, uniqueLabelsArg
             trueSimpleLabel = transitionLabelToSimple(trueLabel) # Convert the true label to a simple label
 
             # Update the score if necessary
-            if predictedLabel == trueLabel:
+            if predictedLabel == trueSimpleLabel:
                 score += 1
                 transitionScore += 1
 
@@ -477,6 +479,8 @@ def testGMMmodelsAllFrames(models, uttTestFeatures, uttTestLabels, uniqueLabelsA
         if not label in uniqueLabels:
             #print(f"Label added to uniqueLabels: {PHONE_DICT[label]}")
             uniqueLabels = np.append(uniqueLabels,label)
+
+    uniqueLabels.sort()
 
     uniqueSimpleLabels = []
     uniqueTransitionLabels = []
@@ -552,7 +556,7 @@ def testGMMmodelsAllFrames(models, uttTestFeatures, uttTestLabels, uniqueLabelsA
             trueSimpleLabel = transitionLabelToSimple(trueLabel) # Convert the true label to a simple label
 
             # Update the score if necessary
-            if predictedLabel == trueLabel:
+            if predictedLabel == trueSimpleLabel:
                 score += 1
                 transitionScore += 1
 
@@ -587,6 +591,8 @@ def testNeuralNetworkAllFrames(clf, uttTestFeatures, uttTestLabels, uniqueLabels
         if not label in uniqueLabels:
             #print(f"Label added to uniqueLabels: {PHONE_DICT[label]}")
             uniqueLabels = np.append(uniqueLabels,label)
+
+    uniqueLabels.sort()
 
     uniqueSimpleLabels = []
     uniqueTransitionLabels = []
@@ -657,7 +663,7 @@ def testNeuralNetworkAllFrames(clf, uttTestFeatures, uttTestLabels, uniqueLabels
                 trueSimpleLabel = transitionLabelToSimple(trueLabel) # Convert the true label to a simple label
 
                 # Update the score if necessary
-                if predictedLabel == trueLabel:
+                if predictedLabel == trueSimpleLabel:
                     score += 1
                     transitionScore += 1
 

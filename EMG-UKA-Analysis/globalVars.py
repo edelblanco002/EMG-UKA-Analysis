@@ -96,5 +96,6 @@ elif STACKING_MODE == 'backwards':
 ########################################
 FRAME_SIZE = 0.025 # Size of the frame used to calculate the EMG features, also the Hilbert transform
 FRAME_SHIFT = 0.005
+FS = 600
 HILBERT_FS = 200 # The sampling frequency at which the Hilbert transform is downsampled after being calculated
 HILBERT_ROW_SIZE = math.floor(HILBERT_FS*FRAME_SIZE)*(2*STACKING_WIDTH + 1) + 1 # The size of the Hilbert transform corresponding to the central and the stacked frames

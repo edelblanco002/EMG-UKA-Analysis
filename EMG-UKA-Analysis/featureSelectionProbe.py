@@ -28,7 +28,7 @@ class Probe:
         allowedScoreFunctions = ['f_classif','mutual_info_classif']
         allowedUtteranceTypes = ['audible','whispered','silent']
         allowedAnalyzedLabels = ['simple','transitions','all']
-        allowedAnalyzedData = ['emg','MFCCs','hilbert','emg-hilbert']
+        allowedAnalyzedData = ['emg','rawEMG','MFCCs','hilbert','emg-hilbert','encodedFeatures']
 
         self.validateSpeakerAndSession(speaker, session, trainSpeaker, trainSession, testSpeaker, testSession)
 
@@ -513,15 +513,15 @@ def getUniqueLabels(list1):
 
     return sorted(unique_list)
 
-def loadData(speaker,session,uttType,analyzedLabels,useChannels,subset,analyzedData):
-    # If speaker or session have been marked with '-all' in order to use both train and test subsets,
+def loadData(speaker,session,uttType,analyzedLabels,useChannels,loadedSubset,analyzedData,actualSubset):
+    # If speaker or session have been marked with '-all' in order to use both train and test loadedSubsets,
     # then remove the '-all' mark
     if speaker.endswith('-all'):
         speaker = speaker[:-4]
     if session.endswith('-all'):
         session = session[:-4]
 
-    gatherDataIntoTable.main(uttType,subset=subset,speaker=speaker,session=session,analyzedData=analyzedData)
+    gatherDataIntoTable.main(uttType,subset=loadedSubset,speaker=speaker,session=session,analyzedData=analyzedData)
 
     # If the probes are done with a specific speaker and session, build the name of the file where it is saved.
     basename = ""
@@ -534,8 +534,8 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,subset,analyzedD
 
     basename += f"{uttType}"
 
-    if subset != 'both':
-        basename += f"_{subset}_"
+    if loadedSubset != 'both':
+        basename += f"_{loadedSubset}_"
 
     # Load the training datasets
     tableFile = tables.open_file(f"{DIR_PATH}/{basename}Table.h5",mode='r')
@@ -584,7 +584,7 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,subset,analyzedD
         removedLabels = 0
 
         # If selected, take only the simple or the transition labels and discard the rest of the examples
-        if not (subset == 'test' and KEEP_ALL_FRAMES_IN_TEST): # If KEEP_ALL_FRAMES_IN_TEST, no frame is discarded from testing subset
+        if not (actualSubset == 'test' and KEEP_ALL_FRAMES_IN_TEST): # If KEEP_ALL_FRAMES_IN_TEST, no frame is discarded from testing loadedSubset
             if analyzedLabels == 'simple':
                 batch, removedLabels = datasetManipulation.removeTransitionPhonemes(batch)
             elif analyzedLabels == 'transitions':
@@ -603,10 +603,10 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,subset,analyzedD
         else: # If the silences are not removed, all the silence labels are mapped to 'sil'
             batch = datasetManipulation.reassignSilences(batch)
 
-        # If the classifier has been trained only with simple labels but it will be tested with all frames of the training subset
-        # and, also, all silences have been removed both from training subset and testing subset
-        # then remove from training subset those transition phonemes that, during testing, are going to be mapped are silences, because their largest part is a silence ('sil+AH', 'B-sp'...) 
-        if REMOVE_SILENCES and subset == 'test' and KEEP_ALL_FRAMES_IN_TEST:
+        # If the classifier has been trained only with simple labels but it will be tested with all frames of the training loadedSubset
+        # and, also, all silences have been removed both from training loadedSubset and testing loadedSubset
+        # then remove from training loadedSubset those transition phonemes that, during testing, are going to be mapped are silences, because their largest part is a silence ('sil+AH', 'B-sp'...) 
+        if REMOVE_SILENCES and actualSubset == 'test' and KEEP_ALL_FRAMES_IN_TEST:
             batch = datasetManipulation.removeTransitionPhonemesMostlySilence(batch)
 
         totalRemovedLabels += removedLabels
@@ -616,29 +616,32 @@ def loadData(speaker,session,uttType,analyzedLabels,useChannels,subset,analyzedD
             batch, removedLabels = datasetManipulation.removeContextPhonesPilotStudy(batch)
             totalRemovedLabels += removedLabels
 
-        # Separate labels (first column) from the features (rest of the columns)
-        features.append(batch[:,1:])
+        
+        newFeatures = batch[:,1:]
 
         if useChannels != []: # If only some channels have been selected
-            features = selectChannels(features,useChannels)
+            newFeatures = selectChannels(newFeatures,useChannels)
+
+        # Separate labels (first column) from the features (rest of the columns)
+        features.append(newFeatures)
 
         labels.append(batch[:,0])
 
     return features, labels
 
-def loadMultipleData(speaker,session,uttType,analyzedLabels,useChannels,subset,analyzedData):
+def loadMultipleData(speaker,session,uttType,analyzedLabels,useChannels,loadedSubset,analyzedData,actualSubset):
     if (type(speaker) is tuple):
         if session != 'all':
-            print(f"ERROR: If you are selecting multiple speakers for {subset}ing, you must select all sessions.")
+            print(f"ERROR: If you are selecting multiple speakers for {loadedSubset}ing, you must select all sessions.")
             raise ValueError
         else:
-            features, labels = loadMultipleSpeakers(speaker,uttType,analyzedLabels,useChannels,subset,analyzedData)
+            features, labels = loadMultipleSpeakers(speaker,uttType,analyzedLabels,useChannels,loadedSubset,analyzedData,actualSubset)
     else: # If speaker is not a tuple, then session must be a tuple
-        features, labels = loadMultipleSessions(speaker,session,uttType,analyzedLabels,useChannels,subset,analyzedData)
+        features, labels = loadMultipleSessions(speaker,session,uttType,analyzedLabels,useChannels,loadedSubset,analyzedData,actualSubset)
 
     return features, labels
 
-def loadMultipleSessions(speaker,sessions,uttType,analyzedLabels,useChannels,subset,analyzedData):
+def loadMultipleSessions(speaker,sessions,uttType,analyzedLabels,useChannels,loadedSubset,analyzedData,actualSubset):
     features = []
     labels = []
 
@@ -646,31 +649,30 @@ def loadMultipleSessions(speaker,sessions,uttType,analyzedLabels,useChannels,sub
     for currentSession in sessions:
         # Load features and labels from current session
         if not currentSession.endswith('-all'):
-            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,subset,analyzedData)
+            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,loadedSubset,analyzedData, actualSubset)
         else:
-            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,'both',analyzedData)
+            currentFeatures, currentLabels = loadData(speaker,currentSession,uttType,analyzedLabels,useChannels,'both',analyzedData, actualSubset)
         # Add it to the output
-        features.append(currentFeatures[:])
-        labels.append(currentLabels[:])
+        features.extend(currentFeatures)
+        labels.extend(currentLabels)
 
     return features, labels
 
-def loadMultipleSpeakers(speakers,uttType,analyzedLabels,useChannels,subset,analyzedData):
+def loadMultipleSpeakers(speakers,uttType,analyzedLabels,useChannels,loadedSubset,analyzedData,actualSubset):
+    features = []
+    labels = []
+
     currentSpeaker: str
     for currentSpeaker in speakers:
         # Load data for current speaker
         if not currentSpeaker.endswith('-all'):
-            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,subset,analyzedData)
+            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,loadedSubset,analyzedData,actualSubset)
         else:
-            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,'both',analyzedData)
+            currentFeatures, currentLabels = loadData(currentSpeaker,'all',uttType,analyzedLabels,useChannels,'both',analyzedData,actualSubset)
 
         # Add it to the output
-        if currentSpeaker == speakers[0]: # If it's the first speaker, just copy loaded data to the output
-            features = currentFeatures[:]
-            labels = currentLabels[:]
-        else: # For the rest of the speakers, stack the new features vertically to output matrix
-            features = np.concatenate((features,currentFeatures), axis=0)
-            labels = np.concatenate((labels,currentLabels), axis=0)
+        features.extend(currentFeatures)
+        labels.extend(currentLabels)
 
     return features, labels
 
@@ -758,11 +760,11 @@ def main(experimentName='default',probes=[]):
         if trainingBatchHasChanged:
             if (type(probe.trainSpeaker) is str) and (type(probe.trainSession) is str):
                 if (not probe.trainSpeaker.endswith('-all')) and (not probe.trainSession.endswith('-all')):
-                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'train',probe.analyzedData)
+                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'train',probe.analyzedData,'train')
                 else:
-                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'both',probe.analyzedData)
+                    trainFeatures, trainLabels = loadData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'both',probe.analyzedData,'train')
             elif (type(probe.trainSpeaker) is tuple) or (type(probe.trainSession) is tuple):
-                trainFeatures, trainLabels = loadMultipleData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'train',probe.analyzedData)
+                trainFeatures, trainLabels = loadMultipleData(probe.trainSpeaker,probe.trainSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'train',probe.analyzedData,'train')
             else:
                 print(f'ERROR: Wrong type for trainSpeaker ({probe.trainSpeaker}) or trainSession ({probe.trainSession})')
                 raise ValueError
@@ -770,11 +772,11 @@ def main(experimentName='default',probes=[]):
         if testingBatchHasChanged:
             if (type(probe.testSpeaker) is str) and (type(probe.testSession) is str):
                 if not probe.testSpeaker.endswith('-all') and not probe.testSession.endswith('-all'):
-                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'test',probe.analyzedData)
+                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'test',probe.analyzedData,'test')
                 else:
-                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'both',probe.analyzedData)
+                    testFeatures, testLabels = loadData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'both',probe.analyzedData,'test')
             elif (type(probe.testSpeaker) is tuple) or (type(probe.testSession) is tuple):
-                testFeatures, testLabels = loadMultipleData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'test',probe.analyzedData)
+                testFeatures, testLabels = loadMultipleData(probe.testSpeaker,probe.testSession,probe.uttType,probe.analyzedLabels,probe.useChannels,'test',probe.analyzedData,'test')
             else:
                 print(f'ERROR: Wrong type for testSpeaker ({probe.testSpeaker}) or testSession ({probe.testSession})')
                 raise ValueError
@@ -802,7 +804,7 @@ def main(experimentName='default',probes=[]):
                 if probe.reductionMethod != 'NoReduction':
                     reductedTestFeatures = []
                     for i in range(len(testFeatures)):
-                        reductedTestFeatures.append(selector.transform(testFeatures))
+                        reductedTestFeatures.append(selector.transform(testFeatures[i]))
                 else:
                     print("Feature reduction ommited")
                     reductedTestFeatures = testFeatures
